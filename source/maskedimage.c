@@ -132,7 +132,7 @@ void setSampleMaskedImage(MaskedImage_P mIm, int x, int y, int band, int value)
 int isMasked(MaskedImage_P mIm, int x, int y)
 {
 	if (mIm==NULL || mIm->mask==NULL)
-		return 0; 
+		return 0;
 	return mIm->mask[x][y];
 }
 
@@ -149,7 +149,7 @@ int constainsMasked(MaskedImage_P mIm, int x, int y, int S)
 	int xs, ys;
     for (dy=-S;dy<=S;dy++) {
         for (dx=-S;dx<=S;dx++) {
-			xs=x+dx; 
+			xs=x+dx;
 			ys=y+dy;
             if (xs<0 || xs>=mIm->image->height)
                 continue;
@@ -170,7 +170,7 @@ int distanceMaskedImage(MaskedImage_P source,int xs,int ys, MaskedImage_P target
 	int dy, dx, band;
 	int xks, yks;
 	int xkt, ykt;
-	long double ssd; 
+	long double ssd;
 	long res;
 	int s_value, t_value, s_gx, t_gx, s_gy, t_gy;
 
@@ -290,15 +290,15 @@ MaskedImage_P downsample2(MaskedImage_P source) {
 			if (ksum>0) {r/=ksum; g/=ksum; b/=ksum;}
 
 			if (m!=0) {
-				setSampleMaskedImage(newimage, x, y, 0, r); 
-				setSampleMaskedImage(newimage, x, y, 1, g); 
+				setSampleMaskedImage(newimage, x, y, 0, r);
+				setSampleMaskedImage(newimage, x, y, 1, g);
 				setSampleMaskedImage(newimage, x, y, 2, b);
 				setMask(newimage, x, y, 0);
 			} else {
 				setMask(newimage, x, y, 1);
-				setSampleMaskedImage(newimage, x, y, 0, 0); 
-				setSampleMaskedImage(newimage, x, y, 1, 0); 
-				setSampleMaskedImage(newimage, x, y, 2, 0); 
+				setSampleMaskedImage(newimage, x, y, 0, 0);
+				setSampleMaskedImage(newimage, x, y, 1, 0);
+				setSampleMaskedImage(newimage, x, y, 2, 0);
 			}
 			ys+=2;
 		}
@@ -329,7 +329,7 @@ MaskedImage_P downsample(MaskedImage_P source)
             for (dy=-2;dy<=3;++dy) {
 				yk=y+dy;
                 if (yk<0 || yk>=W)
-                    continue;
+									continue;
 				ky = kernel[2+dy];
                 for (dx=-2;dx<=3;++dx) {
 					xk = x+dx;
@@ -354,9 +354,9 @@ MaskedImage_P downsample(MaskedImage_P source)
             }
 
 			if (m!=0) {
-				setSampleMaskedImage(newimage, x/2, y/2, 0, r); 
-				setSampleMaskedImage(newimage, x/2, y/2, 1, g); 
-				setSampleMaskedImage(newimage, x/2, y/2, 2, b); 
+				setSampleMaskedImage(newimage, x/2, y/2, 0, r);
+				setSampleMaskedImage(newimage, x/2, y/2, 1, g);
+				setSampleMaskedImage(newimage, x/2, y/2, 2, b);
 				setMask(newimage, x/2, y/2, 0);
 			} else {
 				setMask(newimage, x/2, y/2, 1);
@@ -386,14 +386,14 @@ MaskedImage_P upscale(MaskedImage_P source, int newW,int newH)
 
 			// copy to new image
 			if (!source->mask[xs][ys]) {
-				setSampleMaskedImage(newimage, x, y, 0, getSampleMaskedImage(source, xs, ys, 0)); 
-				setSampleMaskedImage(newimage, x, y, 1, getSampleMaskedImage(source, xs, ys, 1)); 
-				setSampleMaskedImage(newimage, x, y, 2, getSampleMaskedImage(source, xs, ys, 2)); 
+				setSampleMaskedImage(newimage, x, y, 0, getSampleMaskedImage(source, xs, ys, 0));
+				setSampleMaskedImage(newimage, x, y, 1, getSampleMaskedImage(source, xs, ys, 1));
+				setSampleMaskedImage(newimage, x, y, 2, getSampleMaskedImage(source, xs, ys, 2));
 				setMask(newimage, x, y, 0);
 			} else {
-				setSampleMaskedImage(newimage, x, y, 0, 0); 
-				setSampleMaskedImage(newimage, x, y, 1, 0); 
-				setSampleMaskedImage(newimage, x, y, 2, 0); 
+				setSampleMaskedImage(newimage, x, y, 0, 0);
+				setSampleMaskedImage(newimage, x, y, 1, 0);
+				setSampleMaskedImage(newimage, x, y, 2, 0);
 				setMask(newimage, x, y, 1);
 			}
 		}

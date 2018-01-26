@@ -1,6 +1,6 @@
 #include "defineall.h"
 
-// Disable to measure the PSNR or the SSIM measure 
+// Disable to measure the PSNR or the SSIM measure
 
 #define MESURES 0
 
@@ -17,7 +17,7 @@ double min1(double a, double b)
 	return (a + b - fabs(a-b) ) / 2;
 }
 
-int main(int argc, char** argv) 
+int main(int argc, char** argv)
 
 {
 
@@ -31,13 +31,13 @@ int main(int argc, char** argv)
 	printf("              For more information please refer to:                \n");
 	printf(" http://www.cs.princeton.edu/gfx/pubs/Barnes_2009_PAR/index.php    \n");
 	printf("\n");
-	printf("                   @Author: Younesse ANDAM                         \n"); 
+	printf("                   @Author: Younesse ANDAM                         \n");
 	printf("            Contact: younesse.andam@gmail.com                      \n");
 	printf("                Copyright (c) 2010-2011                            \n");
 
 
 	clock_t tic,toc;
-	float cpu_time;     /* Total CPU time in minutes */ 
+	float cpu_time;     /* Total CPU time in minutes */
 
 
 	uchar* data;
@@ -45,8 +45,8 @@ int main(int argc, char** argv)
 	double height,width;
 
 	//Put your file name here
-	char fileNameInput[150] = "C:\\Users\\PVHP9868\\Desktop\\PATCH_MATCH_APPLICATION_CONSOLE\\image_files\\forest\\forest.bmp";
-	char fileNameMasked[150] = "C:\\Users\\PVHP9868\\Desktop\\PATCH_MATCH_APPLICATION_CONSOLE\\image_files\\forest\\forest_pruned.bmp";
+	char fileNameInput[150] = "./image_files/forest/forest.bmp";
+	char fileNameMasked[150] = "./image_files/forest/forest_pruned.bmp";
 
 	char fileNameOutput[150];
 	char fileNameOutputMasked[150];
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 	input_img=cvLoadImage(fileNameInput, 1);
 
     if (!input_img) {
-		printf("Could not load image file: %s\n",fileNameInput); 
+		printf("Could not load image file: %s\n",fileNameInput);
 		exit(1);
 	}
 
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     for ( int i=0 ; i < height ; ++i )
 		for ( int j=0 ; j<width;  ++j )
             if (cvGet2D(maskimage,i,j).val[0] !=255 )
-				cvSet2D(maskimage,i,j,cvScalar(0,0,0));
+							cvSet2D(maskimage,i,j,cvScalar(0,0,0,0));
 
 	//display images
 	cvNamedWindow("Original image", CV_WINDOW_AUTOSIZE);
@@ -104,9 +104,9 @@ int main(int argc, char** argv)
 	int channels=maskimage->nChannels;
 	int step = maskimage->widthStep/sizeof(uchar);
 	int ** mask;
-	mask = (int **) calloc(int(height),sizeof(int*));
-    for ( int i=0 ; i<width ; i++)
-		mask[i] = (int *) calloc(int(width),sizeof(int));
+	mask = (int **) calloc((int)height,sizeof(int*));
+    for ( int i=0 ; i<height ; i++)
+			mask[i] = (int *) calloc((int)width,sizeof(int));
 
 	printf("----------------------------------------------------------------------\n");
 	printf("\n");
@@ -118,19 +118,19 @@ int main(int argc, char** argv)
     for ( int i = 0 ; i < height ; ++i )
         for ( int j = 0 ; j < width ; ++j )
             if ( data[i*step+j*channels]==255 )
-				mask[i][j]=1;	   
+				mask[i][j]=1;
 
 
 		Inpaint_P inp = initInpaint();
 		output_img = inpaint(inp, input_img, (int**)mask, 2);
-        if (!cvSaveImage(fileNameOutput,output_img))
+		if (!cvSaveImage(fileNameOutput,output_img,0))
 
 			printf("/!\\/!\\/!\\/!\\/!\\/!\\Could not save the resultant image. Check the path of saving.../!\\/!\\/!\\/!\\/!\\/!\\\n");
 
 		//cvSaveImage("mask.bmp",maskimage);
-		
-/*---------------------------------------------- Quality Mesure ----------------------------------------------*/ 
-// It will be useful so far to measure the quality of the recontructed areas against the original ones 
+
+/*---------------------------------------------- Quality Mesure ----------------------------------------------*/
+// It will be useful so far to measure the quality of the recontructed areas against the original ones
 
 #if MESURES
 		double ssim;
@@ -150,15 +150,15 @@ int main(int argc, char** argv)
 		printf("DONE\n");
 		printf("The result is saved in: %s\n",fileNameOutput);
 		toc = clock ();
-		cpu_time = float((toc - tic)/CLOCKS_PER_SEC) ;
+		cpu_time = (float)(toc - tic)/CLOCKS_PER_SEC ;
 
 		int secondes;
 		int time=(int)(cpu_time/60);
-		secondes=int(cpu_time-time*60);
+		secondes=(int)(cppu_time-time*60);
 
 		printf("The CPU time is %i minutes and %i secondes ",time,secondes);
 
-		cvWaitKey();
+		cvWaitKey(7000);
 
 		//free memory
 

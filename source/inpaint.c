@@ -47,7 +47,7 @@ MaskedImage_P ExpectationMaximization(Inpaint_P imp, int level)
     double*** vote;
 
     int iterEM = 1+2*level;
-    int iterNNF = int(min1(7,1+level));
+    int iterNNF = (int)min1(7,1+level);
 
     int upscaled;
     MaskedImage_P newsource;

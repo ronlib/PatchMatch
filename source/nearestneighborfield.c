@@ -1,7 +1,7 @@
 #include "nearestneighborfield.h"
 
 /**
-* Nearest-Neighbor Field (see PatchMatch algorithm) 
+* Nearest-Neighbor Field (see PatchMatch algorithm)
 *  This algorithme uses a version proposed by Xavier Philippeau
 *
 */
@@ -84,9 +84,9 @@ void initializeNNFFromOtherNNF(NNF_P nnf, NNF_P otherNnf)
 	fx = nnf->fieldH/otherNnf->fieldH;
     for (x=0;x<nnf->fieldH;++x) {
         for (y=0;y<nnf->fieldW;++y) {
-			xlow = int(min1(x/fx, otherNnf->input->image->height-1));
-			ylow = int(min1(y/fy, otherNnf->input->image->width-1));
-			nnf->field[x][y][0] = otherNnf->field[xlow][ylow][0]*fx;  
+					xlow = (int)min1(x/fx, otherNnf->input->image->height-1);
+					ylow = (int)min1(y/fy, otherNnf->input->image->width-1);
+			nnf->field[x][y][0] = otherNnf->field[xlow][ylow][0]*fx;
 			nnf->field[x][y][1] = otherNnf->field[xlow][ylow][1]*fy;
 			nnf->field[x][y][2] = DSCALE;
 		}
@@ -172,8 +172,8 @@ void minimizeLinkNNF(NNF_P nnf, int x, int y, int dir)
 		xp = xpi + r;
 		r=(rand() % (2*wi)) -wi;
 		yp = ypi + r;
-		xp = int(max1(0, min1(nnf->output->image->height-1, xp )));
-		yp = int(max1(0, min1(nnf->output->image->width-1, yp )));
+		xp = (int)max1(0, min1(nnf->output->image->height-1, xp ));
+		yp = (int)max1(0, min1(nnf->output->image->width-1, yp ));
 
 		dp = distanceNNF(nnf,x,y, xp,yp);
 		if (dp<nnf->field[x][y][2]) {
@@ -185,9 +185,8 @@ void minimizeLinkNNF(NNF_P nnf, int x, int y, int dir)
 	}
 }
 
-// compute distance between two patch 
+// compute distance between two patch
 int distanceNNF(NNF_P nnf, int x,int y, int xp,int yp)
 {
 	return distanceMaskedImage(nnf->input,x,y, nnf->output,xp,yp, nnf->S);
 }
-
