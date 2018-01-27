@@ -10,9 +10,7 @@ proc_incs = subprocess.check_output("pkg-config --cflags opencv".split())
 extensions = [
     Extension("pyinpaint", ["source/pyinpaint.pyx", "source/inpaint.c", "source/maskedimage.c", "source/nearestneighborfield.c"],
               include_dirs=["include", "/usr/include/opencv"],
-              libraries=libs,
-              extra_compile_args=["-g"],
-              extra_link_args=["-g"],)
+              libraries=libs)
     ]
 
 setup(
