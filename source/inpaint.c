@@ -312,9 +312,9 @@ IplImage* inpaint(Inpaint_P imp, IplImage* input, int ** mask, int radius)
         tmp=cvCreateImage(size,IPL_DEPTH_8U,3);
         cvResize(target->image,tmp,CV_INTER_LINEAR);
 
-        cvShowImage("Progression",tmp);
-        cvMoveWindow("Progression",750, 100);
-        cvWaitKey(1);
+        /* cvShowImage("Progression",tmp); */
+        /* cvMoveWindow("Progression",750, 100); */
+        /* cvWaitKey(1); */
     }
 
 

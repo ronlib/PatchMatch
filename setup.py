@@ -8,13 +8,15 @@ libs = [lib.lstrip('-l').lstrip('L/') for lib in str(proc_libs, "utf-8").split()
 proc_incs = subprocess.check_output("pkg-config --cflags opencv".split())
 
 extensions = [
-    Extension("pyinpaint", ["source/pyinpaint.pyx"],
+    Extension("pyinpaint", ["source/pyinpaint.pyx", "source/inpaint.c", "source/maskedimage.c", "source/nearestneighborfield.c"],
               include_dirs=["include", "/usr/include/opencv"],
-              libraries=libs)
+              libraries=libs,
+              extra_compile_args=["-g"],
+              extra_link_args=["-g"],)
     ]
 
 setup(
     name = "My inpaint app",
     # ext_modules = cythonize("source/*.pyx", include_dirs = ["./include/"])
-    ext_modules = cythonize(extensions)
+    ext_modules = cythonize(extensions, gdb_debug=True)
 )
