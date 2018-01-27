@@ -66,8 +66,6 @@ class FigurePaint(object):
             print ("Mask dimensions: ", self.image_mask.shape)
             print ("Mask size: ", self.image_mask.size)
             inp_img_buf = pyinpaint.pyinpaint(self.img, 3, self.image_mask, self.img.shape[0], self.img.shape[1])
-            print (inp_img_buf.shape)
-            inp_img_buf = inp_img_buf.reshape(self.img.shape)
             self.ax.clear()
             self.ax.imshow(inp_img_buf)
             self.fig.canvas.draw()

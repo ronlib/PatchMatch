@@ -17,11 +17,12 @@ cdef extern from "pywrapped_inpaint.c":
 
 def pyinpaint(img, nchannels, mask, H, W):
     cdef unsigned char * output_buf
+    pyshape = img.shape
     c_pyinpaint.pyinpaint(img.tobytes(), nchannels, mask.tobytes(), H, W, &output_buf)
     cdef np.npy_intp shape[1]
     shape[0] = <np.npy_intp> H*W*nchannels
     nparr = np.PyArray_SimpleNewFromData(1, shape, np.NPY_UBYTE, output_buf)
-
+    nparr = nparr.reshape(pyshape)
     return nparr
 
 

@@ -268,7 +268,7 @@ IplImage* inpaint(Inpaint_P imp, IplImage* input, int ** mask, int radius)
     int maxlevel=imp->nbEltPyramid;
 
     // for each level of the pyramid
-    cvNamedWindow("Progression", CV_WINDOW_AUTOSIZE);
+    /* cvNamedWindow("Progression", CV_WINDOW_AUTOSIZE); */
     for (level=maxlevel-1 ; level>0 ; level--) {
         printf( "\n*** Processing -  Zoom 1:%d ***" , 1<<level );
 
