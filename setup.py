@@ -3,6 +3,7 @@ from distutils.extension import Extension
 from Cython.Build import cythonize
 import subprocess
 import os
+import numpy as np
 
 if os.name == "posix":
     proc_libs = subprocess.check_output("pkg-config --libs opencv".split())
@@ -19,6 +20,7 @@ elif os.name == "nt":
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include', 'opencv'))
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include'))
     incs.append('include')
+    incs.append(np.get_include())
 
     libs = []
 
