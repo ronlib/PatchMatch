@@ -13,8 +13,6 @@ if os.name == "posix":
     includes = ["include", "/usr/include/opencv",]
 elif os.name == "nt":
     opencv_installtion_path = r"c:\users\john\Downloads\opencv"
-    # opencv_relative_includes = [["sources", "include", "opencv"], ["sources", "include",],["sources", "modules", "core", "include"]]
-    # incs = [os.path.join(opencv_installtion_path, *rel_path) for rel_path in opencv_relative_includes]
     include_names = ['highgui','gpu','ts','calib3d','features2d','stitching','ocl','superres','contrib','core','video','videostab','legacy','objdetect','nonfree','flann','photo','imgproc','ml',]
     incs = [os.path.join(opencv_installtion_path, 'sources', 'modules', i, 'include') for i in include_names]
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include', 'opencv'))
@@ -22,7 +20,8 @@ elif os.name == "nt":
     incs.append('include')
     incs.append(np.get_include())
 
-    libs = []
+    lib_names = ['opencv_core2413.lib']
+    libs = [os.path.join(opencv_installtion_path, 'build', 'x64', 'vc14', 'lib', i) for i in lib_names]
 
 
 extensions = [
