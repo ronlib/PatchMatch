@@ -9,6 +9,7 @@ if os.name == "posix":
     proc_libs = subprocess.check_output("pkg-config --libs opencv".split())
     libs = [lib.lstrip('-l').lstrip('L/') for lib in str(proc_libs, "utf-8").split()[1:]]
     incs = ["include", "/usr/include/opencv",]
+    extra_link_args = None
 
     includes = ["include", "/usr/include/opencv",]
 elif os.name == "nt":
@@ -20,14 +21,16 @@ elif os.name == "nt":
     incs.append('include')
     incs.append(np.get_include())
 
-    lib_names = ['opencv_core2413.lib']
-    libs = [os.path.join(opencv_installtion_path, 'build', 'x64', 'vc14', 'lib', i) for i in lib_names]
+    libs = ['opencv_core2413', 'opencv_imgproc2413', 'zlib',]
+    extra_link_args = ["/LIBPATH:"+os.path.join(opencv_installtion_path, 'build', 'x86', 'vc14', 'staticlib')]
 
 
 extensions = [
     Extension("pyinpaint", ["source/pyinpaint.pyx", "source/inpaint.c", "source/maskedimage.c", "source/nearestneighborfield.c"],
         include_dirs=incs,
-        libraries=libs),
+        libraries=libs,
+        extra_link_args=extra_link_args,
+            ),
     ]
 
 setup(
