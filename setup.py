@@ -18,6 +18,7 @@ elif os.name == "nt":
     incs = [os.path.join(opencv_installtion_path, 'sources', 'modules', i, 'include') for i in include_names]
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include', 'opencv'))
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include'))
+    incs.append('include')
 
     libs = []
 
