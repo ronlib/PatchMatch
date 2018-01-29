@@ -28,8 +28,8 @@ http://opencv.org/downloads.html
 How to use
 ===========
 
-python3 --args setup.py build_ext --inplace
-python3 --args main.py -f images/forest.bmp
+python3 setup.py build_ext --inplace
+python3 main.py -f images/forest.bmp
 
 
 Enjoy!!
