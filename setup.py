@@ -11,7 +11,6 @@ if os.name == "posix":
     incs = ["include", "/usr/include/opencv",]
     extra_link_args = None
 
-    includes = ["include", "/usr/include/opencv",]
 elif os.name == "nt":
     opencv_installtion_path = r"c:\users\john\Downloads\opencv"
     include_names = ['highgui','gpu','ts','calib3d','features2d','stitching','ocl','superres','contrib','core','video','videostab','legacy','objdetect','nonfree','flann','photo','imgproc','ml',]
@@ -20,7 +19,6 @@ elif os.name == "nt":
     incs.append(os.path.join(opencv_installtion_path, 'sources', 'include'))
     incs.append('include')
     incs.append(np.get_include())
-
     libs = ['opencv_core2413', 'opencv_imgproc2413', 'zlib',]
     extra_link_args = ["/LIBPATH:"+os.path.join(opencv_installtion_path, 'build', 'x86', 'vc14', 'staticlib')]
 
@@ -34,7 +32,6 @@ extensions = [
     ]
 
 setup(
-    name = "My inpaint app",
-    # ext_modules = cythonize("source/*.pyx", include_dirs = ["./include/"])
+    name = "Inpaint extension",
     ext_modules = cythonize(extensions, gdb_debug=True)
 )
