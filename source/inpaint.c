@@ -1,4 +1,6 @@
+#include <Python.h>
 #include "inpaint.h"
+#include "pyinpaint.h"
 
 /** This algorithme uses a version proposed by Xavier Philippeau
 */
@@ -244,6 +246,7 @@ IplImage* inpaint(Inpaint_P imp, IplImage* input, int ** mask, int radius)
 {
     int level, y, x;
     NNF_P new_nnf, new_nnf_rev;
+		printer();
     // initial image
     imp->initial = initMaskedImage(input, mask);
     IplImage* tmp = NULL;

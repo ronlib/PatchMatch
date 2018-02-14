@@ -38,3 +38,6 @@ def pymem_alloc():
     nparr = np.PyArray_SimpleNewFromData(1, shape, np.NPY_INT, carr)
     # return nparr
     return nparr
+
+cdef public void printer():
+    print ('bla in printer()');
