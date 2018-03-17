@@ -154,7 +154,7 @@ int main(int argc, char** argv)
 
 		int secondes;
 		int time=(int)(cpu_time/60);
-		secondes=(int)(cppu_time-time*60);
+		secondes=(int)(cpu_time-time*60);
 
 		printf("The CPU time is %i minutes and %i secondes ",time,secondes);
 

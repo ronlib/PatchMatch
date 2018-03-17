@@ -18,7 +18,7 @@ cdef extern from "pywrapped_inpaint.c":
 def pyinpaint(img, nchannels, mask, H, W):
     cdef unsigned char * output_buf
     pyshape = img.shape
-    c_pyinpaint.pyinpaint(img.tobytes(), nchannels, mask.tobytes(), H, W, &output_buf)
+    c_pyinpaint.wrapped_inpaint(img.tobytes(), nchannels, mask.tobytes(), H, W, &output_buf)
     cdef np.npy_intp shape[1]
     shape[0] = <np.npy_intp> H*W*nchannels
     nparr = np.PyArray_SimpleNewFromData(1, shape, np.NPY_UBYTE, output_buf)
@@ -26,7 +26,7 @@ def pyinpaint(img, nchannels, mask, H, W):
     return nparr
 
 
-
+pp
 def pymem_alloc():
     cdef int* carr
     cdef int carr_len

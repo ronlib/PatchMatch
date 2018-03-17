@@ -166,7 +166,7 @@ int constainsMasked(MaskedImage_P mIm, int x, int y, int S)
 int distanceMaskedImage(MaskedImage_P source,int xs,int ys, MaskedImage_P target,int xt,int yt, int S)
 {
 	long double distance=0;
-	long double wsum=0, ssdmax = 9*255*255;
+	long double wsum=0, ssdmax = S*S*255*255;
 	int dy, dx, band;
 	int xks, yks;
 	int xkt, ykt;

@@ -38,7 +38,7 @@ class FigurePaint(object):
         self.ax_inpaint_button = self.fig.add_axes([0.7, 0.05, 0.1, 0.075])
         self.button_inpaint = Button(self.ax_inpaint_button, 'inpaint')
         self.fig.canvas.mpl_connect('button_press_event', self.inpaint_click)
-        self.timer = self.fig.canvas.new_timer(interval=500)
+        self.timer = self.fig.canvas.new_timer(interval=200)
         self.timer.add_callback(self.update_figures)
         self.timer.start()
 
