@@ -188,5 +188,9 @@ void minimizeLinkNNF(NNF_P nnf, int x, int y, int dir)
 // compute distance between two patch
 int distanceNNF(NNF_P nnf, int x,int y, int xp,int yp)
 {
+#ifndef DPNN_PATCH_DISTANCE
 	return distanceMaskedImage(nnf->input,x,y, nnf->output,xp,yp, nnf->S);
+#else
+	return distanceDPNNMaskedImage(nnf->input,x,y, nnf->output,xp,yp, nnf->S);
+#endif
 }

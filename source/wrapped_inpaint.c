@@ -46,12 +46,12 @@ int wrapped_inpaint(unsigned char* img_data, int nchannels, unsigned char* in_ma
 	int ** mask;
 	/* CvMat mat = cvMat(H, W, CV_8UC3, img_data); */
 	IplImage* input_img = cvCreateImageHeader(cvSize(W, H), IPL_DEPTH_8U, 3);
-	IplImage* input_mask = cvCreateImageHeader(cvSize(W, H), IPL_DEPTH_8U, 1);
+	/* IplImage* input_mask = cvCreateImageHeader(cvSize(W, H), IPL_DEPTH_8U, 1); */
 	IplImage * output_img;
 	CvMat tmp_mat, *continuous_mat_out;
 	/* img = cvCreateMatHeader(H, W, CV_8UC3); */
 	cvSetData(input_img, img_data, W*3);
-	cvSetData(input_mask, in_mask, W*1);
+	/* cvSetData(input_mask, in_mask, W*1); */
 	/* printf("Showing image\n"); */
 	/* cvShowImage("bla", (const void *)input_img); */
 	/* cvWaitKey(10000); */
@@ -63,7 +63,7 @@ int wrapped_inpaint(unsigned char* img_data, int nchannels, unsigned char* in_ma
 	Inpaint_P inp = initInpaint();
 	input_img->width = W;
 	input_img->height = H;
-	output_img = inpaint(inp, (IplImage*)input_img, mask, 4);
+	output_img = inpaint(inp, (IplImage*)input_img, mask, 8);
 	cvGetMat(output_img, &tmp_mat, NULL, 0);
 	continuous_mat_out = cvCloneMat(&tmp_mat);
 	*out_buf = calloc(continuous_mat_out->rows*continuous_mat_out->step, sizeof(unsigned char));
@@ -73,20 +73,3 @@ int wrapped_inpaint(unsigned char* img_data, int nchannels, unsigned char* in_ma
 
 	return 0;
 }
-
-/*
-int main()
-{
-	const unsigned char * data = (const unsigned char*){100, 100, 100, 200, 200, 200, 100, 100, 100, 200, 200, 200};
-	CvMat* img;
-
-
-	img = cvLoadImageM("./images/forest.bmp", CV_LOAD_IMAGE_COLOR);
-	cvShowImage("bla", (const void *)img);
-
-	cvWaitKey(10000);
-	pyinpaint(data, 3, (unsigned char*)0, 2, 2);
-
-	return 0;
-}
-*/

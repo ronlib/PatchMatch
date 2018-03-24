@@ -13,4 +13,8 @@ void minimizeNNF(NNF_P nnf, int pass);
 void minimizeLinkNNF(NNF_P nnf, int x, int y, int dir);
 int distanceNNF(NNF_P nnf, int x, int y, int xp,int yp);
 
+#ifdef DPNN_PATCH_DISTANCE
+#include "lua_inpaint.h"
+#endif
+
 #endif
