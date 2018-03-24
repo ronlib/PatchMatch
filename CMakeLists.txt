@@ -1,17 +1,35 @@
 cmake_minimum_required(VERSION 2.8)
 project(PatchMatch)
-find_package(OpenCV REQUIRED)
-find_package(Lua51)
-FIND_PACKAGE(Torch REQUIRED)
 
-if (NOT LUA51_FOUND)
-	message(FATAL_ERROR "Could not find lua")
-endif (NOT LUA51_FOUND)
 
-if (NOT TORCH_FOUND)
-	# message(FATAL_ERROR "Must provide torch repository path")
-endif (NOT TORCH_FOUND)
-file (TO_CMAKE_PATH "/home/ron/git/torch/install/include" TH_INCLUDE_PATH)
+if (OPENCV_SEARCH_PATH)
+	message("Searching OpenCV at " ${OPENCV_SEARCH_PATH})
+	find_package(
+		OpenCV REQUIRED
+		PATHS OPENCV_SEARCH_PATH)
+else()
+	find_package(OpenCV REQUIRED)
+endif()
+
+if (LUA51_SEARCH_PATH)
+	message("Searching Lua 5.1 at " ${LUA51_SEARCH_PATH})
+	find_package(
+		Lua51 REQUIRED
+		PATHS LUA51_SEARCH_PATH)
+else()
+	find_package(Lua51 REQUIRED)
+endif()
+
+if (TORCH_SEARCH_PATH)
+	message("Searching Torch at " ${TORCH_SEARCH_PATH})
+	find_package(
+		Torch REQUIRED
+		PATHS TORCH_SEARCH_PATH)
+else()
+	find_package(Torch REQUIRED)
+endif()
+
+file (TO_CMAKE_PATH "${Torch_DIR}/../../../include" TH_INCLUDE_PATH)
 
 add_library(luainpaint SHARED "source//inpaint.c" "source//nearestneighborfield.c" "source//maskedimage.c" "source//lua_inpaint.c" "source//wrapped_inpaint.c")
 target_include_directories(luainpaint PRIVATE "include")
