@@ -6,7 +6,7 @@ if (OPENCV_SEARCH_PATH)
 	message("Searching OpenCV at " ${OPENCV_SEARCH_PATH})
 	find_package(
 		OpenCV REQUIRED
-		PATHS OPENCV_SEARCH_PATH)
+		HINTS OPENCV_SEARCH_PATH)
 else()
 	find_package(OpenCV REQUIRED)
 endif()
@@ -15,7 +15,7 @@ if (LUA51_SEARCH_PATH)
 	message("Searching Lua 5.1 at " ${LUA51_SEARCH_PATH})
 	find_package(
 		Lua51 REQUIRED
-		PATHS LUA51_SEARCH_PATH)
+		HINTS LUA51_SEARCH_PATH)
 else()
 	find_package(Lua51 REQUIRED)
 endif()
@@ -24,7 +24,7 @@ if (TORCH_SEARCH_PATH)
 	message("Searching Torch at " ${TORCH_SEARCH_PATH})
 	find_package(
 		Torch REQUIRED
-		PATHS TORCH_SEARCH_PATH)
+		HINTS TORCH_SEARCH_PATH)
 else()
 	find_package(Torch REQUIRED)
 endif()
