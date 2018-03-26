@@ -53,7 +53,12 @@ void error (lua_State *L, const char *fmt, ...) {
 	exit(EXIT_FAILURE);
 }
 
-LUALIB_API int luaopen_luainpaint (lua_State *L) {
+#ifdef _MSC_VER
+__declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
+#else
+LUALIB_API int luaopen_luainpaint (lua_State *L)
+#endif
+{
 	static const luaL_Reg reg_inpaint[] = {
 		/* {"inpaint2",   lua_inpaint}, */
 		/* {"tensorsize", l_tensorsize}, */
