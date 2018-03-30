@@ -67,7 +67,7 @@ LUALIB_API int luaopen_luainpaint (lua_State *L)
 	};
 
   luaL_register(L, LIBRARY_NAME, reg_inpaint);
-	if (luaL_loadfile(L, "/home/ron/studies/project/PatchMatch/patch2vec.lua") || lua_pcall(L, 0, 0, 0))
+	if (luaL_loadfile(L, "patch2vec.lua") || lua_pcall(L, 0, 0, 0))
 		{
 			error(L, "cannot run file: %s",
 						lua_tostring(L, -1));

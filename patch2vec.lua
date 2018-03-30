@@ -2,7 +2,10 @@ require 'torch'
 require 'nn'
 require 'dpnn'
 
-NN = torch.load('/home/ron/studies/project/texture2vec/training/model16_570.t7')
+
+function patch2vec_init(nn_file_path)
+	 NN = torch.load(nn_file_path)
+end
 
 function create_tensor_from_image_storage(storage, H, W, num_channels)
 	 local t = torch.ByteTensor(storage):float()/255
