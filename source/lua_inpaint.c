@@ -244,7 +244,7 @@ int distanceDPNNMaskedImage(MaskedImage_P source,int xs,int ys, MaskedImage_P ta
 
 	lua_return_val = luaL_checknumber(g_L, -1);
 	lua_pop(g_L, 1);
-	printf("Distance: %f\n", lua_return_val*DSCALE);
+	/* printf("Distance: %f\n", lua_return_val*DSCALE); */
 
 	return lua_return_val*DSCALE;
 
