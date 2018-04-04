@@ -23,14 +23,15 @@ double min1(double a, double b)
 
 int create_mask_buffer(const unsigned char * in_mask, int H, int W, int *** out_buf)
 {
+	int i, j;
 	*out_buf = (int **) calloc((int)H,sizeof(int**));
 
-	for ( int i=0 ; i<H ; i++)
+	for (i=0 ; i<H ; i++)
 		(*out_buf)[i] = (int *) calloc((int)W,sizeof(int *));
 
-	for ( int i = 0 ; i < H ; ++i )
-		for ( int j = 0 ; j < W ; ++j )
-			if ( in_mask[i*W+j]>0 )
+	for (i = 0 ; i < H ; ++i )
+		for (j = 0 ; j < W ; ++j )
+			if (in_mask[i*W+j]>0 )
 				(*out_buf)[i][j]=1;
 	return 0;
 
