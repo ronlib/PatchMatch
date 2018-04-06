@@ -48,8 +48,27 @@ if(MSVC)
 endif()
 target_compile_definitions(luainpaint PRIVATE DPNN_PATCH_DISTANCE)
 add_custom_command(TARGET luainpaint POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${PatchMatch_SOURCE_DIR}/lib/"
-	COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:luainpaint>" "${PatchMatch_SOURCE_DIR}/lib/"
-	COMMAND ${CMAKE_COMMAND} -E copy "${PatchMatch_SOURCE_DIR}/patch2vec.lua" "${PatchMatch_SOURCE_DIR}/lib/"
+    # COMMAND ${CMAKE_COMMAND} -E make_directory "${PatchMatch_SOURCE_DIR}/lib/"
+	# COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:luainpaint>" "${PatchMatch_SOURCE_DIR}/lib/"
+	# COMMAND ${CMAKE_COMMAND} -E copy "${PatchMatch_SOURCE_DIR}/patch2vec.lua" "${PatchMatch_SOURCE_DIR}/lib/"
+	COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:luainpaint>" "${PatchMatch_SOURCE_DIR}/../"
+	COMMAND ${CMAKE_COMMAND} -E copy "${PatchMatch_SOURCE_DIR}/patch2vec.lua" "${PatchMatch_SOURCE_DIR}/../"
 	VERBATIM
 )
+
+add_library(patchmatch2 SHARED
+	patchmatch2.1/lua_inpaint.cpp
+	patchmatch2.1/knn.cpp
+	patchmatch2.1/knn.h
+	patchmatch2.1/nn.cpp
+	patchmatch2.1/nn.h
+	patchmatch2.1/patch.cpp
+	patchmatch2.1/patch.h
+	patchmatch2.1/simnn.cpp
+	patchmatch2.1/pm_minimal.cpp
+	patchmatch2.1/simnn.h
+	patchmatch2.1/simpatch.h
+	patchmatch2.1/vecnn.cpp
+	patchmatch2.1/vecnn.h
+	patchmatch2.1/vecpatch.h
+	)
