@@ -58,6 +58,8 @@ add_custom_command(TARGET luainpaint POST_BUILD
 
 add_library(patchmatch2 SHARED
 	patchmatch2.1/lua_inpaint.cpp
+	patchmatch2.1/allegro_emu.cpp
+	patchmatch2.1/allegro_emu.h
 	patchmatch2.1/knn.cpp
 	patchmatch2.1/knn.h
 	patchmatch2.1/nn.cpp
@@ -72,3 +74,5 @@ add_library(patchmatch2 SHARED
 	patchmatch2.1/vecnn.h
 	patchmatch2.1/vecpatch.h
 	)
+
+target_include_directories(patchmatch2 PRIVATE ${LUA_INCLUDE_DIR}//lua5.1)
