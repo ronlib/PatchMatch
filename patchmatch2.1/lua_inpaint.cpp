@@ -40,7 +40,10 @@ extern "C" {
 BITMAP *load_bitmap(const char *filename);
 void save_bitmap(BITMAP *bmp, const char *filename);
 static int nn(lua_State *L);
-static int patchmatch(lua_State *L);
+static int vote(lua_State *L);
+static int release_bitmap(lua_State *L);
+int push_ann_to_stack(lua_State *L, BITMAP *ann);
+
 void error (lua_State *L, const char *fmt, ...);
 
 #ifdef _MSC_VER
@@ -49,11 +52,26 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 	extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
 #endif
 {
-	static const luaL_Reg reg_inpaint[] = {
+	static const luaL_Reg reg_inpaint_f[] = {
 		{"nn", nn},
+		{"vote", vote},
 		{NULL, NULL}
 	};
-  luaL_register(L, "patchmatch", reg_inpaint);
+
+	// out userdata methods
+	static const luaL_Reg reg_inpaint_m[] = {
+		{"__gc", release_bitmap}, // So lua knows how to free the object
+		{NULL, NULL}
+	};
+
+	luaL_newmetatable(L, "Patchmatch.nn");
+	lua_pushstring(L, "__index");
+	lua_pushvalue(L, -2);
+	lua_settable(L, -3);
+
+	luaL_openlib(L, NULL, reg_inpaint_m, 0);
+
+  luaL_openlib(L, "patchmatch", reg_inpaint_f, 0);
 	return 1;
 }
 
@@ -108,15 +126,13 @@ static int nn(lua_State *L)
 		p->window_h = (int)luaL_checknumber(L, i);} i++;
 
 	// TODO: complete ann_prev
-	if (nin >= i && lua_isnil(L, i)) {}
-	else
-		{error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete ann_window
-	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete awinsize
-	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	if (nin >= i && luaL_checknumber(L, i)) {
 		knn_chosen = (int)luaL_checknumber(L, i);
@@ -204,8 +220,10 @@ static int nn(lua_State *L)
 		// Looks like a heat map
 		const char* ans_file_path = "/tmp/ans.bmp";
 		save_bitmap(ans, ans_file_path);
-		destroy_bitmap(ans);
-		lua_pushstring(L, ans_file_path);
+		// TODO: free memory
+		push_ann_to_stack(L, ann);
+		// destroy_bitmap(ans);
+		// lua_pushstring(L, ans_file_path);
 	}
 
 	// clean up
@@ -220,7 +238,7 @@ static int nn(lua_State *L)
   delete bb;
   delete af;
   delete bf;
-  destroy_bitmap(ann);
+  // destroy_bitmap(ann);
   destroy_bitmap(annd_final);
   destroy_bitmap(ann_sim_final);
   if (ann_prev) destroy_bitmap(ann_prev);
@@ -230,13 +248,89 @@ static int nn(lua_State *L)
 	return 1;
 }
 
-
-static int patchmatch(lua_State *L)
+static int release_bitmap(lua_State *L)
 {
+	BITMAP** ud = (BITMAP**) luaL_checkudata(L, 1, "Patchmatch.nn");
+	destroy_bitmap(*ud);
+	*ud = 0;
+	return 0;
+}
+
+int push_ann_to_stack(lua_State *L, BITMAP *ann)
+{
+	BITMAP **anns = (BITMAP**) lua_newuserdata(L, sizeof(BITMAP*));
+	*anns = ann;
+	luaL_getmetatable(L, "Patchmatch.nn");
+	lua_setmetatable(L, -2);
+	return 1;
+}
+
+
+static int vote(lua_State *L)
+{
+	int i = 1;
+	Params *p = new Params();
+	BITMAP *a = NULL, *b = NULL, *ann = NULL, *bnn = NULL;
+	BITMAP *bmask = NULL, *bweight = NULL, *amask = NULL, *aweight = NULL, *ainit = NULL;
+	double coherence_weight = 1, complete_weight = 1;
 	int nin = lua_gettop(L);
 	if (2 > nin) { error(L, "patchmatch called with < 2 input arguments"); exit(1);}
+	const char * B_file_path = luaL_checkstring(L, i); i++;
+	b = load_bitmap(B_file_path);
+	ann = *((BITMAP**) luaL_checkudata(L, i, "Patchmatch.nn")); i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checkudata(L, i, "Patchmatch.nn")) {
+		bnn = *((BITMAP**) luaL_checkudata(L, i, "Patchmatch.nn"));
+	} i++;
 
-	BITMAP *a = NULL, *b = NULL;
+	if (nin >= i)
+		{
+			if (strcmp(luaL_checkstring(L, i), "cpu") == 0)
+				{p->algo = ALGO_CPU;}
+			else {
+					error(L, "Does not currently support other algorithms but 'cpu'\n");
+			}
+		} i++;
+
+	if (nin >= i && luaL_checknumber(L, i)) {p->patch_w = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && luaL_checkstring(L, i)) {
+		bmask = load_bitmap(luaL_checkstring(L, i));} i++;
+
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support bweight\n"); } i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support bweight\n"); } i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support coherence_weight\n"); } i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support complete_weight\n"); } i++;
+	if (nin >= i && luaL_checkstring(L, i)) {
+		amask = load_bitmap(luaL_checkstring(L, i));} i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support amask\n"); } i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support aweight\n"); } i++;
+	if (nin >= i && !lua_isnil(L, i))
+		{ error(L, "Does not currently support ainit\n"); } i++;
+
+	RegionMasks *amaskm = amask ? new RegionMasks(p, amask): NULL;
+	a = vote(p, b, ann, bnn, bmask, bweight, coherence_weight, complete_weight, amaskm, aweight, ainit, NULL, NULL, 1);
+
+	destroy_region_masks(amaskm);
+	const char* ans_file_path = "/tmp/vote.bmp";
+	save_bitmap(a, ans_file_path);
+	lua_pushstring(L, ans_file_path);
+
+	delete p;
+  destroy_bitmap(a);
+  destroy_bitmap(ainit);
+  destroy_bitmap(b);
+	// These two variables are destroyed by lua
+  // destroy_bitmap(ann);
+  // destroy_bitmap(bnn);
+  destroy_bitmap(bmask);
+  destroy_bitmap(bweight);
+	//  destroy_bitmap(amask);
+  destroy_bitmap(aweight);
 	return 1;
 }
 
@@ -246,6 +340,6 @@ void error (lua_State *L, const char *fmt, ...) {
 	va_start(argp, fmt);
 	vfprintf(stderr, fmt, argp);
 	va_end(argp);
- 	// lua_close(L);
-	// exit(EXIT_FAILURE);
+ 	lua_close(L);
+	exit(EXIT_FAILURE);
 }
