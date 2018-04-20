@@ -52,8 +52,8 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
 
   int mode = MODE_IMAGE;
   if (mxGetDimensions(A)[2] != 3) { // a discriptor rather than rgb
-    if (mxIsUint8(A) && mxIsUint8(B)) { mode = MODE_VECB; } 
-    else if (is_float(A) && is_float(B)) { mode = MODE_VECF; } 
+    if (mxIsUint8(A) && mxIsUint8(B)) { mode = MODE_VECB; }
+    else if (is_float(A) && is_float(B)) { mode = MODE_VECF; }
     else { mexErrMsgTxt("input not uint8, single, or double"); }
   }
 
@@ -63,10 +63,10 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
   if (mode == MODE_IMAGE) {
     a = convert_bitmap(A);
     b = convert_bitmap(B);
-	borig = b;
+		borig = b;
     aw = a->w; ah = a->h;
     bw = b->w; bh = b->h;
-  } 
+  }
   else if (mode == MODE_VECB) {
     ab = convert_vecbitmap<unsigned char>(A);
     bb = convert_vecbitmap<unsigned char>(B);
@@ -74,7 +74,7 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     aw = ab->w; ah = ab->h;
     bw = bb->w; bh = bb->h;
     p->vec_len = ab->n;
-  } 
+  }
   else if (mode == MODE_VECF) {
     af = convert_vecbitmap<float>(A);
     bf = convert_vecbitmap<float>(B);
@@ -110,7 +110,7 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
   if (nin > i && !mxIsEmpty(pin[i])) { p->rs_iters = mxGetScalar(pin[i]); } i++;
   if (nin > i && !mxIsEmpty(pin[i])) { p->cores = int(mxGetScalar(pin[i])); } i++;
   if (nin > i && !mxIsEmpty(pin[i])) { bmask = convert_bitmap(pin[i]); } i++; // XC+
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  if (nin > i && !mxIsEmpty(pin[i])) {
     if (!mxIsDouble(pin[i])) { mexErrMsgTxt("\nwin_size should be of type double."); }
     win_size = (double*)mxGetData(pin[i]);
     if (mxGetNumberOfElements(pin[i])==1) { p->window_h = p->window_w = int(win_size[0]); }
@@ -118,28 +118,28 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     else { mexErrMsgTxt("\nwin_size should be a scalar for square window or [h w] for a rectangular one."); }
   } i++;
   /* continue parsing parameters */
-  // [ann_prev=NULL], [ann_window=NULL], [awinsize=NULL], 
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  // [ann_prev=NULL], [ann_window=NULL], [awinsize=NULL],
+  if (nin > i && !mxIsEmpty(pin[i])) {
     ANN_PREV = pin[i];
     int clip_count = 0;
     ann_prev = convert_field(p, ANN_PREV, bw, bh, clip_count);       // Bug fixed by Connelly
   } i++;
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  if (nin > i && !mxIsEmpty(pin[i])) {
     ANN_WINDOW = pin[i];
     int clip_count = 0;
-    ann_window = convert_field(p, ANN_WINDOW, bw, bh, clip_count);      
+    ann_window = convert_field(p, ANN_WINDOW, bw, bh, clip_count);
   } i++;
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  if (nin > i && !mxIsEmpty(pin[i])) {
     AWINSIZE = pin[i];
-    awinsize = convert_winsize_field(p, AWINSIZE, aw, ah);  
+    awinsize = convert_winsize_field(p, AWINSIZE, aw, ah);
     if (p->window_w==INT_MAX||p->window_h==INT_MAX) { p->window_w = -1; p->window_h = -1; }
   } i++;
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  if (nin > i && !mxIsEmpty(pin[i])) {
     knn_chosen = int(mxGetScalar(pin[i]));
     if (knn_chosen == 1) { knn_chosen = -1; }
     if (knn_chosen <= 0) { mexErrMsgTxt("\nknn is less than zero"); }
   } i++;
-  if (nin > i && !mxIsEmpty(pin[i])) { 
+  if (nin > i && !mxIsEmpty(pin[i])) {
     scalemax = mxGetScalar(pin[i]);
     if (scalemax <= 0) { mexErrMsgTxt("\nscalerange is less than zero"); }
     scalemin = 1.0/scalemax;
@@ -170,7 +170,7 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
   if (sim_mode) {
     init_xform_tables(scalemin, scalemax, 1);
   }
-  
+
   RegionMasks *amaskm = amask ? new RegionMasks(p, amask): NULL;
 
   BITMAP *ann = NULL; // NN field
@@ -204,11 +204,11 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     } else {
       ann = init_nn(p, a, b, bmask, NULL, amaskm, 1, ann_window, awinsize);
       BITMAP *annd = init_dist(p, a, b, ann, bmask, NULL, amaskm);
-      nn(p, a, b, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores, ann_window, awinsize); 
-      if (ann_prev) minnn(p, a, b, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);  
+      nn(p, a, b, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores, ann_window, awinsize);
+      if (ann_prev) minnn(p, a, b, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);
       annd_final = annd;
     }
-  } 
+  }
 /*
   else if (mode == MODE_VECB) {
 //    mexPrintf("mode vecb %dx%dx%d, %dx%dx%d\n", ab->w, ab->h, ab->n, bb->w, bb->h, bb->n);
@@ -217,19 +217,19 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     ann = vec_init_nn<unsigned char>(p, ab, bb, bmask, NULL, amaskm);
     VECBITMAP<int> *annd = vec_init_dist<unsigned char, int>(p, ab, bb, ann, bmask, NULL, amaskm);
 //    mexPrintf("  %d %d %d %p %p\n", annd->get(0,0)[0], annd->get(1,0)[0], annd->get(0,1)[0], amaskm, bmask);
-    vec_nn<unsigned char, int>(p, ab, bb, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores); 
-    if (ann_prev) vec_minnn<unsigned char, int>(p, ab, bb, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);  
+    vec_nn<unsigned char, int>(p, ab, bb, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores);
+    if (ann_prev) vec_minnn<unsigned char, int>(p, ab, bb, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);
     annd_final = vecbitmap_to_bitmap(annd);
     delete annd;
-  } 
+  }
   else if (mode == MODE_VECF) {
 //    mexPrintf("mode vecf %dx%dx%d, %dx%dx%d\n", af->w, af->h, af->n, bf->w, bf->h, bf->n);
 //    mexPrintf("  %f %f %f %f\n", af->get(0,0)[0], af->get(1,0)[0], af->get(0,1)[0], af->get(0,0)[1]);
     if (!af || !bf) { mexErrMsgTxt("internal error: no a or b image"); }
     ann = vec_init_nn<float>(p, af, bf, bmask, NULL, amaskm);
     VECBITMAP<float> *annd = vec_init_dist<float, float>(p, af, bf, ann, bmask, NULL, amaskm);
-    vec_nn<float, float>(p, af, bf, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores); 
-    if (ann_prev) vec_minnn<float, float>(p, af, bf, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);  
+    vec_nn<float, float>(p, af, bf, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores);
+    if (ann_prev) vec_minnn<float, float>(p, af, bf, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);
     annd_final = create_bitmap(annd->w, annd->h);
     clear(annd_final);
     delete annd;
@@ -243,8 +243,8 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     if (!ab || !bb) { mexErrMsgTxt("internal error: no a or b image"); }
     ann = XCvec_init_nn<unsigned char>(p, ab, bb, bmask, NULL, amaskm);
     VECBITMAP<int> *annd = XCvec_init_dist<unsigned char, int>(p, ab, bb, ann, bmask, NULL, amaskm);
-    XCvec_nn<unsigned char, int>(p, ab, bb, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores); 
-    if (ann_prev) XCvec_minnn<unsigned char, int>(p, ab, bb, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);  
+    XCvec_nn<unsigned char, int>(p, ab, bb, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores);
+    if (ann_prev) XCvec_minnn<unsigned char, int>(p, ab, bb, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);
     annd_final = vecbitmap_to_bitmap(annd);
     delete annd;
   } else if(mode == MODE_VECF) {
@@ -254,11 +254,11 @@ void mexFunction(int nout, mxArray *pout[], int nin, const mxArray *pin[]) {
     if (!af || !bf) { mexErrMsgTxt("internal error: no a or b image"); }
     ann = XCvec_init_nn<float>(p, af, bf, bmask, NULL, amaskm);
     VECBITMAP<float> *annd = XCvec_init_dist<float, float>(p, af, bf, ann, bmask, NULL, amaskm);
-    XCvec_nn<float, float>(p, af, bf, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores); 
-    if (ann_prev) XCvec_minnn<float, float>(p, af, bf, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);  
+    XCvec_nn<float, float>(p, af, bf, ann, annd, amaskm, bmask, 0, 0, rp, 0, 0, 0, NULL, p->cores);
+    if (ann_prev) XCvec_minnn<float, float>(p, af, bf, ann, annd, ann_prev, bmask, 0, 0, rp, NULL, amaskm, p->cores);
     annd_final = create_bitmap(annd->w, annd->h);
     clear(annd_final);
-    delete annd;	
+    delete annd;
   }
 
   destroy_region_masks(amaskm);

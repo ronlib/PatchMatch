@@ -39,6 +39,7 @@ extern "C" {
 
 BITMAP *load_bitmap(const char *filename);
 void save_bitmap(BITMAP *bmp, const char *filename);
+static int nn(lua_State *L);
 static int patchmatch(lua_State *L);
 void error (lua_State *L, const char *fmt, ...);
 
@@ -49,7 +50,7 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 #endif
 {
 	static const luaL_Reg reg_inpaint[] = {
-		{"inpaint", patchmatch},
+		{"nn", nn},
 		{NULL, NULL}
 	};
   luaL_register(L, "patchmatch", reg_inpaint);
@@ -57,7 +58,7 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 }
 
 
-static int patchmatch(lua_State *L)
+static int nn(lua_State *L)
 {
 	int nin = lua_gettop(L);
 	int i = 1;
@@ -86,6 +87,8 @@ static int patchmatch(lua_State *L)
 
   a = load_bitmap(A_file_path);
 	b = load_bitmap(B_file_path);
+	aw = a->w; ah = a->h;
+	bw = b->w; bh = b->h;
 
 	if (nin >= i && luaL_checkstring(L, i))
 		{
@@ -105,13 +108,15 @@ static int patchmatch(lua_State *L)
 		p->window_h = (int)luaL_checknumber(L, i);} i++;
 
 	// TODO: complete ann_prev
-	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter");} i++;
+	if (nin >= i && lua_isnil(L, i)) {}
+	else
+		{error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete ann_window
-	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter");} i++;
+	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete awinsize
-	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter");} i++;
+	if (nin >= i && lua_isnil(L, i)) {} else {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	if (nin >= i && luaL_checknumber(L, i)) {
 		knn_chosen = (int)luaL_checknumber(L, i);
@@ -179,18 +184,24 @@ static int patchmatch(lua_State *L)
 	{
 		BITMAP *ans = create_bitmap(annd_final->w, annd_final->h);
 		for (int y = 0 ; y < ah ; y++) {
-			int *row = (int *)annd_final->line[y];
-			int *arow = (int *)ans->line[y];
+			int *row = (int *)ann->line[y];
+			int *ansrow = (int *)ans->line[y];
+			// int *ann_row = (int *) ann->line[y];
+			// int *annd_row = (int *) annd_final->line[y];
 			for (int x = 0 ; x < aw ; x++) {
 				int r,g,b;
 				int xd = INT_TO_X(row[x]);
 				int yd = INT_TO_Y(row[x]);
-				r = g = b = sqrt((float)(xd*xd+yd*yd)/2);
-				arow[x] = int(r*255)|(int(g*255)<<8)|(int(b*255)<<16);
+				double xdd = (double)255*xd/bw;
+				double ydd = (double)255*yd/bh;
+				r = g = b = sqrt((double)(xdd*xdd+ydd*ydd)/2);
+				ansrow[x] = r|g<<8|b<<16|255<<24;
 			}
 
 		}
 
+		// Just for demonstration, showing the target pixel distance from (0,0).
+		// Looks like a heat map
 		const char* ans_file_path = "/tmp/ans.bmp";
 		save_bitmap(ans, ans_file_path);
 		destroy_bitmap(ans);
@@ -217,8 +228,16 @@ static int patchmatch(lua_State *L)
   if (awinsize) destroy_bitmap(awinsize);
 
 	return 1;
+}
 
 
+static int patchmatch(lua_State *L)
+{
+	int nin = lua_gettop(L);
+	if (2 > nin) { error(L, "patchmatch called with < 2 input arguments"); exit(1);}
+
+	BITMAP *a = NULL, *b = NULL;
+	return 1;
 }
 
 
@@ -227,6 +246,6 @@ void error (lua_State *L, const char *fmt, ...) {
 	va_start(argp, fmt);
 	vfprintf(stderr, fmt, argp);
 	va_end(argp);
-	lua_close(L);
-	exit(EXIT_FAILURE);
+ 	// lua_close(L);
+	// exit(EXIT_FAILURE);
 }

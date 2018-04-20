@@ -1,24 +1,27 @@
 
 /* -------------------------------------------------------------------------
-  Minimal (unoptimized) example of PatchMatch. Requires that ImageMagick be installed.
+	 Minimal (unoptimized) example of PatchMatch. Requires that ImageMagick be installed.
 
-  To improve generality you can:
+	 To improve generality you can:
    - Use whichever distance function you want in dist(), e.g. compare SIFT descriptors computed densely.
    - Search over a larger search space, such as rotating+scaling patches (see MATLAB mex for examples of both)
 
-  To improve speed you can:
+	 To improve speed you can:
    - Turn on optimizations (/Ox /Oi /Oy /fp:fast or -O6 -s -ffast-math -fomit-frame-pointer -fstrength-reduce -msse2 -funroll-loops)
    - Use the MATLAB mex which is already tuned for speed
    - Use multiple cores, tiling the input. See our publication "The Generalized PatchMatch Correspondence Algorithm"
    - Tune the distance computation: manually unroll loops for each patch size, use SSE instructions (see readme)
    - Precompute random search samples (to avoid using rand, and mod)
    - Move to the GPU
-  -------------------------------------------------------------------------- */
+	 -------------------------------------------------------------------------- */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <climits>
+extern "C" {
+#include "allegro_emu.h"
+}
 
 #ifndef MAX
 #define MAX(a, b) ((a)>(b)?(a):(b))
@@ -29,13 +32,18 @@
    BITMAP: Minimal image class
    ------------------------------------------------------------------------- */
 
-class BITMAP { public:
+class PMBITMAP { public:
   int w, h;
   int *data;
-  BITMAP(int w_, int h_) :w(w_), h(h_) { data = new int[w*h]; }
-  ~BITMAP() { delete[] data; }
-  int *operator[](int y) { return &data[y*w]; }
+  PMBITMAP(int w_, int h_) :w(w_), h(h_) { data = new int[w*h]; }
+  ~PMBITMAP() { delete[] data; }
+  int *operator[](int y) {
+		if (0 != data) {return &data[y*w];}
+	}
 };
+
+PMBITMAP *pm_load_bitmap(const char *filename);
+void pm_save_bitmap(PMBITMAP *bmp, const char *filename);
 
 void check_im() {
   if (system("identify > null.txt") != 0) {
@@ -44,6 +52,26 @@ void check_im() {
 }
 
 BITMAP *load_bitmap(const char *filename) {
+	PMBITMAP* bitmap = pm_load_bitmap(filename);
+	BITMAP* ans = new BITMAP(bitmap->w, bitmap->h);
+	ans->data = (unsigned char*)bitmap->data;
+	ans->line = new unsigned char * [ans->h];
+	int w = ans->w, h = ans->h;
+
+	// No more need for bitmap
+	bitmap->data = 0;
+	delete bitmap;
+
+	for (int i=0 ; i < h ; i++)
+		{
+			ans->line[i] = &ans->data[i*w*4];
+		}
+
+	return ans;
+
+}
+
+PMBITMAP *pm_load_bitmap(const char *filename) {
   check_im();
   char rawname[256], txtname[256];
   strcpy(rawname, filename);
@@ -62,7 +90,7 @@ BITMAP *load_bitmap(const char *filename) {
   if (fscanf(f, "%d %d", &w, &h) != 2) { fprintf(stderr, "Error reading image '%s': could not get size from ImageMagick identify\n", filename); exit(1); }
   fclose(f);
   f = fopen(rawname, "rb");
-  BITMAP *ans = new BITMAP(w, h);
+  PMBITMAP *ans = new PMBITMAP(w, h);
   unsigned char *p = (unsigned char *) ans->data;
   for (int i = 0; i < w*h*4; i++) {
     int ch = fgetc(f);
@@ -74,6 +102,14 @@ BITMAP *load_bitmap(const char *filename) {
 }
 
 void save_bitmap(BITMAP *bmp, const char *filename) {
+	PMBITMAP *bitmap = new PMBITMAP(bmp->w, bmp->h);
+	bitmap->data = (int*)bmp->data;
+	bitmap->w = bmp->w;
+	bitmap->h = bmp->h;
+	pm_save_bitmap(bitmap, filename);
+}
+
+void pm_save_bitmap(PMBITMAP *bmp, const char *filename) {
   check_im();
   char rawname[256];
   strcpy(rawname, filename);
@@ -105,7 +141,7 @@ int rs_max   = INT_MAX;
 
 /* Measure distance between 2 patches with upper left corners (ax, ay) and (bx, by), terminating early if we exceed a cutoff distance.
    You could implement your own descriptor here. */
-int dist(BITMAP *a, BITMAP *b, int ax, int ay, int bx, int by, int cutoff=INT_MAX) {
+int dist(PMBITMAP *a, PMBITMAP *b, int ax, int ay, int bx, int by, int cutoff=INT_MAX) {
   int ans = 0;
   for (int dy = 0; dy < patch_w; dy++) {
     int *arow = &(*a)[ay+dy][ax];
@@ -123,7 +159,7 @@ int dist(BITMAP *a, BITMAP *b, int ax, int ay, int bx, int by, int cutoff=INT_MA
   return ans;
 }
 
-void improve_guess(BITMAP *a, BITMAP *b, int ax, int ay, int &xbest, int &ybest, int &dbest, int bx, int by) {
+void improve_guess(PMBITMAP *a, PMBITMAP *b, int ax, int ay, int &xbest, int &ybest, int &dbest, int bx, int by) {
   int d = dist(a, b, ax, ay, bx, by, dbest);
   if (d < dbest) {
     dbest = d;
@@ -133,10 +169,10 @@ void improve_guess(BITMAP *a, BITMAP *b, int ax, int ay, int &xbest, int &ybest,
 }
 
 /* Match image a to image b, returning the nearest neighbor field mapping a => b coords, stored in an RGB 24-bit image as (by<<12)|bx. */
-void patchmatch(BITMAP *a, BITMAP *b, BITMAP *&ann, BITMAP *&annd) {
+void patchmatch(PMBITMAP *a, PMBITMAP *b, PMBITMAP *&ann, PMBITMAP *&annd) {
   /* Initialize with random nearest neighbor field (NNF). */
-  ann = new BITMAP(a->w, a->h);
-  annd = new BITMAP(a->w, a->h);
+  ann = new PMBITMAP(a->w, a->h);
+  annd = new PMBITMAP(a->w, a->h);
   int aew = a->w - patch_w+1, aeh = a->h - patch_w + 1;       /* Effective width and height (possible upper left corners of patches). */
   int bew = b->w - patch_w+1, beh = b->h - patch_w + 1;
   memset(ann->data, 0, sizeof(int)*a->w*a->h);
@@ -200,20 +236,20 @@ void patchmatch(BITMAP *a, BITMAP *b, BITMAP *&ann, BITMAP *&annd) {
   }
 }
 
-int main(int argc, char *argv[]) {
-  argc--;
-  argv++;
-  if (argc != 4) { fprintf(stderr, "pm_minimal a b ann annd\n"
-                                   "Given input images a, b outputs nearest neighbor field 'ann' mapping a => b coords, and the squared L2 distance 'annd'\n"
-                                   "These are stored as RGB 24-bit images, with a 24-bit int at every pixel. For the NNF we store (by<<12)|bx."); exit(1); }
-  printf("Loading input images\n");
-  BITMAP *a = load_bitmap(argv[0]);
-  BITMAP *b = load_bitmap(argv[1]);
-  BITMAP *ann = NULL, *annd = NULL;
-  printf("Running PatchMatch\n");
-  patchmatch(a, b, ann, annd);
-  printf("Saving output images\n");
-  save_bitmap(ann, argv[2]);
-  save_bitmap(annd, argv[3]);
-  return 0;
-}
+// int main(int argc, char *argv[]) {
+//   argc--;
+//   argv++;
+//   if (argc != 4) { fprintf(stderr, "pm_minimal a b ann annd\n"
+// 													 "Given input images a, b outputs nearest neighbor field 'ann' mapping a => b coords, and the squared L2 distance 'annd'\n"
+// 													 "These are stored as RGB 24-bit images, with a 24-bit int at every pixel. For the NNF we store (by<<12)|bx."); exit(1); }
+//   printf("Loading input images\n");
+//   PMBITMAP *a = pm_load_bitmap(argv[0]);
+//   PMBITMAP *b = pm_load_bitmap(argv[1]);
+//   PMBITMAP *ann = NULL, *annd = NULL;
+//   printf("Running PatchMatch\n");
+//   patchmatch(a, b, ann, annd);
+//   printf("Saving output images\n");
+//   save_bitmap(ann, argv[2]);
+//   save_bitmap(annd, argv[3]);
+//   return 0;
+// }
