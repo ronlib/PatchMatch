@@ -30,7 +30,7 @@ void srand2(unsigned seed) {
   if (!rand2_u) { rand2_u++; }
   if (!rand2_v) { rand2_v++; }
   for (int i = 0; i < 10; i++) { rand2(); }
-  
+
   rand2_u = rand2();
   rand2_v = rand2()^seed;
   if (!rand2_u) { rand2_u++; }
@@ -120,7 +120,7 @@ BITMAP *norm_image_init(int *accum, int w, int h, BITMAP *ainit) {
   return ans;
 }
 
-// fill in non-voted pixel using value of corresponding pixel in ainit 
+// fill in non-voted pixel using value of corresponding pixel in ainit
 BITMAP *norm_image_init(double *accum, int w, int h, BITMAP *ainit) {
   BITMAP *ans = create_bitmap(w, h);
 #pragma omp parallel for schedule(static, 16)
@@ -160,7 +160,7 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
       if (IS_MASK && region_masks && ((int *) region_masks->bmp->line[y])[x] != ((int *) region_masks->bmp->line[yp])[xp]) {
         row[x] = INT_MAX; continue;
       }
-      
+
       for (int dy = 0; dy < PATCH_W; dy++) { // copy a patch from a to adata
         int *drow = ((int *) a->line[y+dy])+x;
         int *adata_row = adata+(dy*PATCH_W);
@@ -181,16 +181,16 @@ template<int PATCH_W>
 BITMAP *vote_n(Params *p, BITMAP *b,
 							 BITMAP *ann, BITMAP *bnn,
 							 BITMAP *bmask, BITMAP *bweight,
-							 double coherence_weight, double complete_weight,         
-							 RegionMasks *amask, BITMAP *aweight, BITMAP *ainit, RegionMasks *region_masks, BITMAP *aconstraint, int mask_self_only) 
+							 double coherence_weight, double complete_weight,
+							 RegionMasks *amask, BITMAP *aweight, BITMAP *ainit, RegionMasks *region_masks, BITMAP *aconstraint, int mask_self_only)
 {
- 
+
 	printf("vote, mask_self_only=%d\n", mask_self_only);
 
 	int sz = ann->w * ann->h; sz = sz << 2; // 4 * w * h
   double *accum = new double[sz]; // accumulator for RGB and total weights
   memset((void *) accum, 0, sizeof(double) * sz);
-  
+
   double wa = 1, wb = 1;
   if (bnn) {
     wa = coherence_weight / ((ann->h-PATCH_W+1) * (ann->w-PATCH_W+1));
@@ -198,7 +198,7 @@ BITMAP *vote_n(Params *p, BITMAP *b,
   }
 
   Box box = get_abox(p, ann, amask);
-  
+
   /* Coherence */
   printf("vote_n, amask: %p, bmask: %p, aweight: %p, bweight: %p, mask_self_only: %d\n", amask, bmask, aweight, bweight, mask_self_only);
   for (int ay = box.ymin; ay < box.ymax; ay++) {
@@ -208,7 +208,7 @@ BITMAP *vote_n(Params *p, BITMAP *b,
       int bx, by;
       getnn(ann, ax, ay, bx, by);
 	  // Note: currently an output patch CANNOT vote to an input patch outside the mask 'bmask' (this seems reasonable)
-      if (!mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; } 
+      if (!mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; }
 
       double w = wa;
       if (aweight) { w *= ((float *) aweight->line[ay+PATCH_W/2])[ax+PATCH_W/2]; /*printf("aweight: %f\n", w);*/ } // weight is centered, unlike NN fields
@@ -238,7 +238,7 @@ BITMAP *vote_n(Params *p, BITMAP *b,
         int ax, ay;
         getnn(bnn, bx, by, ax, ay);
 		// Note: currently an input patch CAN vote to an output patch outside the mask 'amask' (not sure this is good)
-		//if (amask && ((int *) amask->line[ay])[ax]) { continue; } 
+		//if (amask && ((int *) amask->line[ay])[ax]) { continue; }
 
         double w = wb;
         if (bweight) { w *= ((float *) bweight->line[by+PATCH_W/2])[bx+PATCH_W/2]; }
@@ -257,14 +257,14 @@ BITMAP *vote_n(Params *p, BITMAP *b,
       }
     }
   }
-  
+
   //BITMAP *ans = norm_image(accum, ann->w, ann->h);
   BITMAP *ans = NULL;
   printf("ainit: %p\n", ainit);
   ans = ainit ? norm_image_init(accum, ann->w, ann->h, ainit) : norm_image(accum, ann->w, ann->h);
 
   delete[] accum;
-  
+
   return ans;
 }
 
@@ -277,7 +277,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
                       RegionMasks *amask, BITMAP *aweight, BITMAP *ainit, RegionMasks *region_masks, BITMAP *aconstraint, int mask_self_only) {
   init_openmp(p);
   //return vote_n<PATCH_W>(p, b, ann, bnn, bmask, bweight, coherence_weight, complete_weight, amask, aweight, ainit, region_masks, aconstraint);
-  
+
 	int sz = ann->w*ann->h; sz = sz << 2;
   double *accum1 = new double[sz];
   memset((void *) accum1, 0, sizeof(double) * sz);
@@ -291,7 +291,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
   }
 
   Box box = get_abox(p, ann, amask);
-  
+
   printf("vote_n_openmp, amask: %p, bmask: %p, aweight: %p, bweight: %p, mask_self_only: %d\n", amask, bmask, aweight, bweight, mask_self_only);
 //#pragma omp parallel for schedule(static, 16)
 #pragma omp parallel
@@ -311,7 +311,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
           getnn(ann, ax, ay, bx, by);
 	      // Note: currently an output patch CANNOT vote to an input patch outside the mask 'bmask' (this seems reasonable)
 
-          if (!mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; } 
+          if (!mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; }
 
           double w = wa;
           if (aweight) { w *= ((float *) aweight->line[ay+PATCH_W/2])[ax+PATCH_W/2]; /*printf("aweight: %f\n", w);*/ }
@@ -331,7 +331,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
           }
         }
       }
-    } 
+    }
 		else if (nthread == 1) {
       /* Completeness */
       if (bnn) {
@@ -342,7 +342,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
             int ax, ay;
             getnn(bnn, bx, by, ax, ay);
 		    // Note: currently an input patch CAN vote to an output patch outside the mask 'amask' (not sure this is good)
-		    //if (amask && ((int *) amask->line[ay])[ax]) { continue; } 
+		    //if (amask && ((int *) amask->line[ay])[ax]) { continue; }
 
             double w = wb;
             if (bweight) { w *= ((float *) bweight->line[by+PATCH_W/2])[bx+PATCH_W/2]; }
@@ -374,7 +374,7 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
       arow1[ax] += arow2[ax];
     }
   }
-  
+
   //BITMAP *ans = norm_image(accum, ann->w, ann->h);
   BITMAP *ans = NULL;
   printf("ainit: %p\n", ainit);
@@ -382,11 +382,11 @@ BITMAP *vote_n_openmp(Params *p, BITMAP *b,
 
   delete[] accum1;
   delete[] accum2;
-  
+
   return ans;
 }
 
-class VoteLink { 
+class VoteLink {
 public:
   int pos;
   VoteLink *next;
@@ -398,7 +398,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
                         BITMAP *ann, BITMAP *bnn,
                         BITMAP *bmask, BITMAP *bweight,
                         double coherence_weight, double complete_weight,
-                        RegionMasks *amask, BITMAP *aweight, BITMAP *ainit, RegionMasks *region_masks, BITMAP *aconstraint, int mask_self_only) 
+                        RegionMasks *amask, BITMAP *aweight, BITMAP *ainit, RegionMasks *region_masks, BITMAP *aconstraint, int mask_self_only)
 {
   int tiles = p->cores;
   printf("vote_n_cputiled, IS_SIMPLE=%d, ALLOW_AMASK=%d, mask_self_only=%d\n", IS_SIMPLE, ALLOW_AMASK, mask_self_only);
@@ -414,7 +414,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
   }
 
   Box box = get_abox(p, ann, amask);
-  
+
   /* Completeness */
   VoteLink *links = NULL;
   VoteLink **start = NULL;
@@ -430,7 +430,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
         if (bmask && ((int *) bmask->line[by])[bx]) { continue; }
         int ax, ay;
         getnn(bnn, bx, by, ax, ay);
-        
+
         VoteLink **startp = &start[ay*ann->w+ax];
         linksp->next = *startp;
         linksp->pos = XY_TO_INT(bx, by);
@@ -460,7 +460,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
         int bx, by;
         getnn(ann, ax, ay, bx, by);
 	    // Note: currently an output patch CANNOT vote to an input patch outside the mask 'bmask' (this seems reasonable)
-        if (!IS_SIMPLE && !mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; } 
+        if (!IS_SIMPLE && !mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; }
 
         WTYPE w = IS_SIMPLE ? 1: wa;
         if (!IS_SIMPLE && aweight) { w *= ((float *) aweight->line[ay+PATCH_W/2])[ax+PATCH_W/2]; /*printf("aweight: %f\n", w);*/ }
@@ -478,7 +478,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
             p[3] += w;
           }
         }
-        
+
         if (!IS_SIMPLE && bnn) {
           /* Completeness */
           VoteLink *current = start[ay*ann->w+ax];
@@ -515,7 +515,7 @@ BITMAP *vote_n_cputiled(Params *p, BITMAP *b,
   delete[] accum;
   delete[] links;
   delete[] start;
-  
+
   return ans;
 }
 
@@ -548,7 +548,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
           BITMAP *ann, BITMAP *annd,
           RegionMasks *amask, BITMAP *bmask,
           int level, int em_iter, RecomposeParams *rp, int offset_iter, int update_type, RegionMasks *region_masks, int tiles,
-					BITMAP *ann_window, BITMAP *awinsize) 
+					BITMAP *ann_window, BITMAP *awinsize)
 {
 
   printf("in nn_n, masks are: %p %p %p, tiles=%d\n", amask, bmask, region_masks, tiles);
@@ -588,9 +588,9 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
             adata_row[dx0] = drow[dx0];
           }
         }
-        
+
         int src_mask = IS_MASK ? (region_masks ? ((int *) region_masks->bmp->line[y])[x]: 0): 0;
-        
+
         int xbest, ybest;
         getnn(ann, x, y, xbest, ybest);
         int err = annd_row[x];
@@ -611,10 +611,10 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                     ((!region_masks || ((int *) region_masks->bmp->line[ypp])[xpp] == src_mask) &&
                      (!bmask || !((int *) bmask->line[ypp])[xpp]) &&
                      (!amask || !((int *) amask->bmp->line[y])[x+dx]))
-                   )) 
+                   ))
 							{
                 // faster way to calculate error with known error( Neighbor(ax,ay), MatchInB(Neighbor(ax,ay)) )
-								int err0 = ((int *) annd->line[y])[x+dx]; 
+								int err0 = ((int *) annd->line[y])[x+dx];
 
                 int xa = dx, xb = 0;
                 if (dx > 0) { xa = 0; xb = dx; }
@@ -633,7 +633,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                   partial +=  dr34*dr34+dg34*dg34+db34*db34
                              -dr12*dr12-dg12*dg12-db12*db12;
                 }
-                err0 += (dx < 0) ? partial: -partial; 
+                err0 += (dx < 0) ? partial: -partial;
                 if (err0 < err) {
                   err = err0;
                   xbest = xpp;
@@ -650,7 +650,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 
               if ((xpp != xbest || ypp != ybest) &&
                   (unsigned) ypp < (unsigned) (b->h-PATCH_W+1) &&
-                  (!IS_MASK || 
+                  (!IS_MASK ||
                     ((!region_masks || ((int *) region_masks->bmp->line[ypp])[xpp] == src_mask) &&
                      (!bmask || !((int *) bmask->line[ypp])[xpp]) &&
                      (!amask || !((int *) amask->bmp->line[y+dy])[x]))
@@ -686,7 +686,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                 }
               }
             }
-          } 
+          }
 					else {
             /* Propagate x */
             if ((unsigned) (x+dx) < (unsigned) (ann->w-PATCH_W)) {
@@ -731,7 +731,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
             }
           }
         }
-        
+
         ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
         ((int *) annd->line[y])[x] = err;
       }
@@ -783,9 +783,9 @@ void nn_n_gpucpu(Params *p, BITMAP *a, BITMAP *b,
               adata_row[dx0] = drow[dx0];
             }
           }
-          
+
           int src_mask = IS_MASK ? (region_masks ? ((int *) region_masks->bmp->line[y])[x]: 0): 0;
-          
+
           int xbest, ybest;
           getnn(ann, x, y, xbest, ybest);
           int xbest0 = xbest, ybest0 = ybest;
@@ -837,7 +837,7 @@ void nn_n_gpucpu(Params *p, BITMAP *a, BITMAP *b,
               attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
             }
           }
-        
+
           if (jump == 1 && allow_rs) {
             unsigned int seed = (x | (y<<11)) ^ iter_seed;
             seed = RANDI(seed);
@@ -887,8 +887,8 @@ template<int PATCH_W, int IS_MASK, int IS_WINDOW>
 void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
           BITMAP *ann, BITMAP *annd,
           RegionMasks *amask, BITMAP *bmask,
-          int level, int em_iter, RecomposeParams *rp, int offset_iter, int update_type, RegionMasks *region_masks, int tiles,		  
-					BITMAP *ann_window, BITMAP *awinsize) 
+          int level, int em_iter, RecomposeParams *rp, int offset_iter, int update_type, RegionMasks *region_masks, int tiles,
+					BITMAP *ann_window, BITMAP *awinsize)
 {
 
   if (tiles < 0) { tiles = p->cores; }
@@ -942,9 +942,9 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
               adata_row[dx0] = drow[dx0];
             }
           }
-          
+
           int src_mask = IS_MASK ? (region_masks ? ((int *) region_masks->bmp->line[y])[x]: 0): 0;
-          
+
           int xbest, ybest;
           getnn(ann, x, y, xbest, ybest);
           int err = annd_row[x];
@@ -972,7 +972,7 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                       ((!region_masks || ((int *) region_masks->bmp->line[ypp])[xpp] == src_mask) &&
                        (!bmask || !((int *) bmask->line[ypp])[xpp]) &&
                        (!amask || !((int *) amask->bmp->line[y])[x+dx]))
-                     )) 
+                     ))
 								{
                   int err0 = ((int *) annd->line[y])[x+dx];
 
@@ -1009,11 +1009,11 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                 ypp -= dy;
                 if ((xpp != xbest || ypp != ybest) &&
                     (unsigned) ypp < (unsigned) (b->h-PATCH_W+1) &&
-                    (!IS_MASK || 
+                    (!IS_MASK ||
                       ((!region_masks || ((int *) region_masks->bmp->line[ypp])[xpp] == src_mask) &&
                        (!bmask || !((int *) bmask->line[ypp])[xpp]) &&
                        (!amask || !((int *) amask->bmp->line[y+dy])[x]))
-                    )) 
+                    ))
 								{
                   int err0 = ((int *) annd->line[y+dy])[x];
 
@@ -1048,7 +1048,7 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
               }
             } // end IS_WINDOW = false
 						else { // IS_WINDOW = true
-              
+
 							/* Propagate x */
               if ((unsigned) (x+dx) < (unsigned) (ann->w-PATCH_W)) {
                 int xpp, ypp;
@@ -1083,7 +1083,7 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
           for (int mag = rs_max_curr; mag >= p->rs_min; mag = int(mag*p->rs_ratio)) {
             for (int rs_iter = 0; rs_iter < rs_iters; rs_iter++) {
               int xmin = max(xbest-mag,0), xmax = min(xbest+mag+1, bew);
-              int ymin = max(ybest-mag,0), ymax = min(ybest+mag+1, beh);              
+              int ymin = max(ybest-mag,0), ymax = min(ybest+mag+1, beh);
               seed = RANDI(seed);
               int xpp = xmin+seed%(xmax-xmin);
               seed = RANDI(seed);
@@ -1097,7 +1097,7 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
           }
 
 #if SYNC_WRITEBACK
-          if (y+ychange != yfinal) {     
+          if (y+ychange != yfinal) {
 #endif
           ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
           ((int *) annd->line[y])[x] = err;
@@ -1172,7 +1172,7 @@ void nn_n_proponly(Params *p, BITMAP *a, BITMAP *b,
           if (err == 0) { continue; }
 
           /* Propagate x */
-          if ((unsigned) (x+dx) < (unsigned) (ann->w-PATCH_W)) { // with the trick of using unsigned, pixels on the boundary won't be checked 
+          if ((unsigned) (x+dx) < (unsigned) (ann->w-PATCH_W)) { // with the trick of using unsigned, pixels on the boundary won't be checked
             int xpp, ypp;
             getnn(ann, x+dx, y, xpp, ypp);
             xpp -= dx;
@@ -1321,12 +1321,12 @@ void nn_n_fullrand(Params *p, BITMAP *a, BITMAP *b,
   double P_prop = 0.56;
   double sigma_prop = 6.3;
   double sigma_rs = 4.5;
-  
+
   vector<int> rs_list;
   for (int mag = rs_max; mag >= p->rs_min; mag = int(mag*p->rs_ratio)) {
     rs_list.push_back(mag);
   }
-  
+
   #pragma omp parallel for schedule(static, 128)
   for (int ipixel = 0; ipixel < npixels; ipixel++) {
     int adata[PATCH_W*PATCH_W];
@@ -1342,9 +1342,9 @@ void nn_n_fullrand(Params *p, BITMAP *a, BITMAP *b,
         adata_row[dx0] = drow[dx0];
       }
     }
-    
+
     int src_mask = IS_MASK ? (region_masks ? ((int *) region_masks->bmp->line[y])[x]: 0): 0;
-    
+
     int xbest, ybest, err;
     #pragma omp critical
     {
@@ -1375,7 +1375,7 @@ void nn_n_fullrand(Params *p, BITMAP *a, BITMAP *b,
       int xpp = xbest+dx, ypp = ybest+dy;
       attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
     }
-    
+
     #pragma omp critical
     {
       ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
@@ -1400,7 +1400,7 @@ RegionMasks::RegionMasks(Params *p, BITMAP *region_masks, int full, BITMAP *bmas
     box[0].xmin = box[0].ymin = 0;
     box[0].xmax = region_masks->w - p->patch_w + 1;
     box[0].ymax = region_masks->h - p->patch_w + 1;
-  } 
+  }
 	else {
     for (int y = 0; y <= region_masks->h - p->patch_w; y++) {
       int *row = (int *) region_masks->line[y];
@@ -1433,7 +1433,7 @@ Box get_abox(Params *p, BITMAP *a, RegionMasks *amask, int trim_patch) {
   if (!amask) {
     Box ans;
     ans.xmin = ans.ymin = 0;
-		ans.xmax = trim_patch ? (a->w - p->patch_w + 1) : a->w; 
+		ans.xmax = trim_patch ? (a->w - p->patch_w + 1) : a->w;
 		ans.ymax = trim_patch ? (a->h - p->patch_w + 1) : a->h;
     return ans;
   }
@@ -1465,9 +1465,9 @@ BITMAP *init_nn(Params *p, BITMAP *a, BITMAP *b, BITMAP *bmask, RegionMasks *reg
   Box box = get_abox(p, a, amask);
 
   if (region_masks) {
-    if (a->w != b->w || a->h != b->h || a->w != region_masks->bmp->w || a->h != region_masks->bmp->h) { 
-			fprintf(stderr, "Size differs in init_nn, with region masks (%dx%d, %dx%d, %dx%d)\n", a->w, a->h, b->w, b->h, region_masks->bmp->w, region_masks->bmp->h); 
-			exit(1); 
+    if (a->w != b->w || a->h != b->h || a->w != region_masks->bmp->w || a->h != region_masks->bmp->h) {
+			fprintf(stderr, "Size differs in init_nn, with region masks (%dx%d, %dx%d, %dx%d)\n", a->w, a->h, b->w, b->h, region_masks->bmp->w, region_masks->bmp->h);
+			exit(1);
 		}
   }
 
@@ -1510,8 +1510,8 @@ BITMAP *init_nn(Params *p, BITMAP *a, BITMAP *b, BITMAP *bmask, RegionMasks *reg
 				if (iter>=max_iters) {
 					if (ann_window) {
 					// adopt the prior field
-						getnn(ann_window, x, y, xdest, ydest); 
-					} 
+						getnn(ann_window, x, y, xdest, ydest);
+					}
 					else {
 					// adopt identity field (linear transform if different dimensions)
 						xdest = x * b->w / a->w;
@@ -1528,7 +1528,7 @@ BITMAP *init_nn(Params *p, BITMAP *a, BITMAP *b, BITMAP *bmask, RegionMasks *reg
         row[x] = sample[id][idx];
       }
     }
-  } 
+  }
 	else if (!bmask && !region_masks) {
     //fprintf(stderr, "init_nn openmp\n");
     #pragma omp parallel for schedule(static, 8)
@@ -1550,7 +1550,7 @@ BITMAP *init_nn(Params *p, BITMAP *a, BITMAP *b, BITMAP *bmask, RegionMasks *reg
         row[x] = XY_TO_INT(xp, yp);
       }
     }
-  } 
+  }
 	else {
     vector<int> sample[256];
     if (!region_masks) { sample[0].reserve(ew*eh); }
@@ -1626,7 +1626,7 @@ BITMAP *init_dist(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask, R
     else if (p->patch_w == 31) { ans = init_dist_n<31,1,1>(p, a, b, ann, bmask, region_masks, amask); }
     else if (p->patch_w == 32) { ans = init_dist_n<32,1,1>(p, a, b, ann, bmask, region_masks, amask); }
     else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-  } 
+  }
 	else if (amask || bmask || region_masks) {
     //printf("init_dist is masked\n");
     if      (p->patch_w == 1) { ans = init_dist_n<1,1,0>(p, a, b, ann, bmask, region_masks, amask); }
@@ -1662,7 +1662,7 @@ BITMAP *init_dist(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask, R
     else if (p->patch_w == 31) { ans = init_dist_n<31,1,0>(p, a, b, ann, bmask, region_masks, amask); }
     else if (p->patch_w == 32) { ans = init_dist_n<32,1,0>(p, a, b, ann, bmask, region_masks, amask); }
 		else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-  } 
+  }
 	else {
     //printf("init_dist is unmasked\n");
     if      (p->patch_w == 1) { ans = init_dist_n<1,0,0>(p, a, b, ann, bmask, region_masks, amask); }
@@ -1745,7 +1745,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 31) { nn_n<31,1,1>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else if (p->patch_w == 32) { nn_n<32,1,1>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-    } 
+    }
 		else if (bmask == NULL && amask == NULL && region_masks == NULL) {
       printf("Running nn, using unmasked\n");
       if      (p->patch_w == 1) { nn_n<1,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
@@ -1781,7 +1781,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 31) { nn_n<31,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else if (p->patch_w == 32) { nn_n<32,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-    } 
+    }
 		else {
       printf("Running nn, using masked\n");
       if      (p->patch_w == 1) { nn_n<1,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
@@ -1818,7 +1818,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 32) { nn_n<32,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
     }
-  } 
+  }
 	else if (algo == ALGO_CPUTILED) {
     if (is_window(p)) {
       printf("Running nn cputiled, using windowed and masked\n");
@@ -1855,7 +1855,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 31) { nn_n_cputiled<31,1,1>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else if (p->patch_w == 32) { nn_n_cputiled<32,1,1>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-    } 
+    }
 		else if (bmask == NULL && amask == NULL && region_masks == NULL) {
       //printf("Using unmasked\n");
       if (p->rs_max == 0) {
@@ -1893,7 +1893,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
         else if (p->patch_w == 31) { nn_n_proponly<31>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
         else if (p->patch_w == 32) { nn_n_proponly<32>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
         else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-      } 
+      }
 			else {
         printf("Running nn cputiled, no windows or masks\n");
         if      (p->patch_w == 1) { nn_n_cputiled<1,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
@@ -1930,7 +1930,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
         else if (p->patch_w == 32) { nn_n_cputiled<32,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
         else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
       }
-    } 
+    }
 		else {
       printf("Running nn cputiled, using masks\n");
       if      (p->patch_w == 1) { nn_n_cputiled<1,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
@@ -1967,7 +1967,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 32) { nn_n_cputiled<32,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles, ann_window, awinsize); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
     }
-  } 
+  }
 	else if (algo == ALGO_GPUCPU) {
     if (bmask == NULL && amask == NULL && region_masks == NULL) {
       if      (p->patch_w == 1) { nn_n_gpucpu<1,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
@@ -2003,7 +2003,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 31) { nn_n_gpucpu<31,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else if (p->patch_w == 32) { nn_n_gpucpu<32,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-    } 
+    }
 		else {
       if      (p->patch_w == 1) { nn_n_gpucpu<1,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else if (p->patch_w == 2) { nn_n_gpucpu<2,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
@@ -2039,7 +2039,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 32) { nn_n_gpucpu<32,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
     }
-  } 
+  }
 	else if (p->algo == ALGO_FULLRAND) {
     if (bmask == NULL && amask == NULL && region_masks == NULL) {
       if      (p->patch_w == 1) { nn_n_fullrand<1,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
@@ -2075,7 +2075,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 31) { nn_n_fullrand<31,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else if (p->patch_w == 32) { nn_n_fullrand<32,0,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-    } 
+    }
 		else {
       if      (p->patch_w == 1) { nn_n_fullrand<1,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else if (p->patch_w == 2) { nn_n_fullrand<2,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
@@ -2111,7 +2111,7 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
       else if (p->patch_w == 32) { nn_n_fullrand<32,1,0>(p, a, b, ann, annd, amask, bmask, level, em_iter, rp, offset_iter, update_type, region_masks, tiles); }
       else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
     }
-  } 
+  }
 	else {
     fprintf(stderr, "Unknown algorithm %d\n", algo); exit(1);
   }
@@ -2317,7 +2317,7 @@ int patch_dist(Params *p, BITMAP *a, int ax, int ay,
   if ((unsigned) bx >= (unsigned) (b->w - p->patch_w + 1) ||
       (unsigned) by >= (unsigned) (b->h - p->patch_w + 1)) { fprintf(stderr, "b coord out of bounds: %d, %d (%dx%d)\n", bx, by, b->w, b->h); exit(1); }
   if (region_masks && ((int *) region_masks->bmp->line[ay])[ax] != ((int *) region_masks->bmp->line[by])[bx]) { return INT_MAX; }
-  
+
   if (is_window(p)) {
     int ans = 0;
     for (int dy = 0; dy < p->patch_w; dy++) {
@@ -2339,7 +2339,7 @@ int patch_dist(Params *p, BITMAP *a, int ax, int ay,
       }
     }
     return ans;
-  } 
+  }
 	else {
     int ans = 0;
     for (int dy = 0; dy < p->patch_w; dy++) {
@@ -2431,7 +2431,7 @@ void check_dists(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, int
           for (int dx = -1; dx <= 1; dx++) {
             if ((unsigned) (xp+dx) < (unsigned) (b->w-p->patch_w+1) &&
                 (unsigned) (yp+dy) < (unsigned) (b->h-p->patch_w+1)) {
-              printf("%08d ", patch_dist(p, a, x, y, b, xp+dx, yp+dy));    
+              printf("%08d ", patch_dist(p, a, x, y, b, xp+dx, yp+dy));
             }
             printf("\n");
           }
@@ -2440,7 +2440,7 @@ void check_dists(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, int
       }
     }
   }
-  if (max_err > 0) 
+  if (max_err > 0)
 		printf("check_dists: max_err=%d, min_val=%d should be %d\n", max_err, min_val, min_valb);
 }
 
@@ -2476,9 +2476,9 @@ void minnn_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP 
       if ((unsigned) xp >= (unsigned) (b->w-p->patch_w+1) ||
           (unsigned) yp >= (unsigned) (b->h-p->patch_w+1)) { continue; }
       if (HAS_MASKS && bmask && ((int *) bmask->line[yp])[xp]) { continue; }
-      
+
 			int dprev = patch_dist_ab<PATCH_W, IS_WINDOW, HAS_MASKS>(p, a, x, y, b, xp, yp, dcurrent, region_masks);
-      
+
       if (dprev < dcurrent) {
         _putpixel32(ann, x, y, XY_TO_INT(xp, yp));
         _putpixel32(annd, x, y, dprev);
@@ -2488,7 +2488,7 @@ void minnn_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP 
   Params pcopy(*p);
   pcopy.nn_iters = rp->minnn_optp_nn_iters;
   pcopy.rs_max = rp->minnn_optp_rs_max;
-  
+
   nn(&pcopy, a, b, ann, annd, amask, bmask, level, em_iter, rp, 0, 0, 1, region_masks, ntiles);
 }
 
@@ -2527,7 +2527,7 @@ void minnn(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP *a
 		else if (p->patch_w == 31) { return minnn_n<31, 1, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
 		else if (p->patch_w == 32) { return minnn_n<32, 1, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
 		else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-  } 
+  }
 	else if (bmask || region_masks || amask) {
     if      (p->patch_w == 1 ) { return minnn_n<1 , 0, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
     else if (p->patch_w == 2 ) { return minnn_n<2 , 0, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
@@ -2562,7 +2562,7 @@ void minnn(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP *a
 		else if (p->patch_w == 31) { return minnn_n<31, 0, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
 		else if (p->patch_w == 32) { return minnn_n<32, 0, 1>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
 		else { fprintf(stderr, "Patch size unsupported: %d\n", p->patch_w); exit(1); }
-  } 
+  }
 	else {
     if      (p->patch_w == 1 ) { return minnn_n<1 , 0, 0>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }
     else if (p->patch_w == 2 ) { return minnn_n<2 , 0, 0>(p, a, b, ann, annd, ann_prev, bmask, level, em_iter, rp, region_masks, amask, ntiles); }

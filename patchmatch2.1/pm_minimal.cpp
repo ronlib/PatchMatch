@@ -94,9 +94,15 @@ PMBITMAP *pm_load_bitmap(const char *filename) {
   unsigned char *p = (unsigned char *) ans->data;
   for (int i = 0; i < w*h*4; i++) {
     int ch = fgetc(f);
-    if (ch == EOF) { fprintf(stderr, "Error reading image '%s': raw file is smaller than expected size %dx%dx4\n", filename, w, h, 4); exit(1); }
+    if (ch == EOF) { fprintf(stderr, "Error reading image '%s': raw file is smaller than expected size %dx%dx\n", filename, w, h); exit(1); }
     *p++ = ch;
-  }
+		// &0xffffff - a patch for an input where the bitmap is has 0xff on the
+		// last byte of every mask pixel. In that case, we zero the last byte
+		// (represents transparency)
+		if (i%4 == 3 && 0==*(p-4) && 0==*(p-2) && 0==*(p-3))
+			{
+				*(p-1) = 0;
+			}
   fclose(f);
   return ans;
 }
