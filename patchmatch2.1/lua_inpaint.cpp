@@ -114,13 +114,15 @@ static int nn(lua_State *L)
 			p->algo = ALGO_CPU;
 		} i++;
 
-	if (nin >= i && luaL_checknumber(L, i)) {p->patch_w = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->nn_iters = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->rs_max = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->rs_min = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->rs_ratio = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->rs_iters = (int)luaL_checknumber(L, i);} i++;
-	if (nin >= i && luaL_checknumber(L, i)) {p->cores = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->patch_w = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->nn_iters = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->rs_max = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->rs_min = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->rs_ratio = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->rs_iters = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->cores = (int)luaL_checknumber(L, i);} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checkstring(L, i)) {amask = load_bitmap(luaL_checkstring(L, i));} i++;
+	if (nin >= i && !lua_isnil(L, i) && luaL_checkstring(L, i)) {bmask = load_bitmap(luaL_checkstring(L, i));} i++;
 	if (nin >= i+1 && luaL_checknumber(L, i)) {
 		p->window_w = (int)luaL_checknumber(L, i); i++;
 		p->window_h = (int)luaL_checknumber(L, i);} i++;
