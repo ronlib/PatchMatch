@@ -1,5 +1,13 @@
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+
+#include "TH/TH.h"
+#include <TH/THStorage.h>
+#include <TH/THTensor.h>
 extern "C" {
+#define LUA_LIB
 #include "lua.h"
 #include "lauxlib.h"
 #include "luaT.h"
@@ -43,8 +51,9 @@ static int nn(lua_State *L);
 static int vote(lua_State *L);
 static int release_bitmap(lua_State *L);
 int push_ann_to_stack(lua_State *L, BITMAP *ann);
-
 void error (lua_State *L, const char *fmt, ...);
+
+static lua_State * g_L = 0;
 
 #ifdef _MSC_VER
 __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
@@ -70,8 +79,9 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 	lua_settable(L, -3);
 
 	luaL_openlib(L, NULL, reg_inpaint_m, 0);
-
   luaL_openlib(L, "patchmatch", reg_inpaint_f, 0);
+
+	g_L = L;
 	return 1;
 }
 
@@ -159,6 +169,7 @@ static int nn(lua_State *L)
   }
 
 	init_params(p);
+	p->nn_dist = 1;
 	RegionMasks *amaskm = amask ? new RegionMasks(p, amask): NULL;
 
 	BITMAP *ann = NULL; // NN field
@@ -344,4 +355,53 @@ void error (lua_State *L, const char *fmt, ...) {
 	va_end(argp);
  	lua_close(L);
 	exit(EXIT_FAILURE);
+}
+
+
+int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
+{
+	if (16 != p->patch_w) { fprintf(stderr, "nn16_patch_dist should be called with p->patch_w==16\n"); exit(1); }
+
+	unsigned char *abuf, *bbuf;
+	abuf = (unsigned char*)calloc(16*16*3, sizeof(unsigned char));
+	bbuf = (unsigned char*)calloc(16*16*3, sizeof(unsigned char));
+
+	for (int dy = 0 ; dy < 16 ; dy++) {
+		unsigned char *arow = abuf + dy*16*3;
+		int *brow = ((int *) b->line[by+dy])+bx;
+		for (int dx = 0 ; dx < 16 ; dx++) {
+			int ad = adata[dx];
+			int bd = brow[dx];
+			unsigned char *ar = &abuf[3*dx];
+			unsigned char *br = &bbuf[3*dx];
+			ar[0] = ad&255;			   	// r
+			ar[1] = (ad>>8)&&255;		// g
+			ar[2] = (ad>>16)&255;		// b
+			br[0] = bd&255;
+			br[1] = (bd>>8)&&255;
+			br[2] = (bd>>16)&255;
+		}
+	}
+
+	THByteStorage *a_th_storage, *b_th_storage;
+	a_th_storage = THByteStorage_newWithData(abuf, 16*16*3);
+	b_th_storage = THByteStorage_newWithData(bbuf, 16*16*3);
+
+	lua_getglobal(g_L, "compute_patches_distance_NN");
+	luaT_pushudata(g_L, a_th_storage, "torch.ByteStorage");
+	luaT_pushudata(g_L, b_th_storage, "torch.ByteStorage");
+	lua_pushnumber(g_L, 16);
+	lua_pushnumber(g_L, 16);
+	lua_pushnumber(g_L, 3);
+
+	if (lua_pcall(g_L, 5, 1, 0) != 0)
+		{
+			luaL_error(g_L, "error running function `f': %s",
+                 lua_tostring(g_L, -1));
+		}
+
+	int lua_return_val = (int)luaL_checknumber(g_L, -1);
+	lua_pop(g_L, 1);
+
+	return 0;
 }

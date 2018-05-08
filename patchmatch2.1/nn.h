@@ -35,7 +35,7 @@ using namespace std;
 
 #ifndef MAX
 //template<class T> inline T MAX(T a, T b) { a > b ? a : b; }
-//template<class T> inline T MIN(T a, T b) { a < b ? a : b; } 
+//template<class T> inline T MIN(T a, T b) { a < b ? a : b; }
 #define MAX(a, b) ((a)>(b)?(a):(b))
 #define MIN(a, b) ((a)<(b)?(a):(b))
 #endif
@@ -87,7 +87,7 @@ class RegionMasks;
 
 class Params { public:
   int algo;              /* Algorithm to use, one of ALGO_*. */
-  
+
   /* Randomized NN algorithm parameters. */
   int patch_w;           /* Width and height of square patch. */
   int vec_len;           /* Length of vector if using vectorized NN algorithms (vecnn.h), for non-square patches and feature descriptors. */
@@ -110,7 +110,7 @@ class Params { public:
   int weight_r;          /* Multiplicative weights for R, G, B in distance computation. */
   int weight_g;
   int weight_b;
-  
+
   /* Tree NN algorithm parameters. */
   int pca_dim;           /* Tree PCA dim, INT_MAX for no PCA. */
   double pca_var;        /* Fraction of total variance, e.g. 0.95 for 95%, negative to not use this param. */
@@ -126,6 +126,8 @@ class Params { public:
   int enrich_times;
   int do_inverse_enrich;
   int do_enrich;
+
+	int nn_dist;           /* Should use NN comparison (only if PATCH_W==16). */
 
   /* Defaults. */
   Params()
@@ -163,7 +165,8 @@ class Params { public:
      enrich_iters(0),
      enrich_times(1),
      do_inverse_enrich(1),
-     do_enrich(1)
+		do_enrich(1),
+		nn_dist(0)
      { }
 };
 
@@ -180,12 +183,12 @@ void nn(Params *p, BITMAP *a, BITMAP *b,
         int level=0, int em_iter=0, RecomposeParams *rp=NULL, int offset_iter=0, int update_type=0, int cache_b=0,
         RegionMasks *region_masks=NULL, int tiles=-1, BITMAP *ann_window=NULL, BITMAP *awinsize=NULL);
 
-class Box { 
+class Box {
 public:
   int xmin, ymin, xmax, ymax;
 };
 
-class RegionMasks { 
+class RegionMasks {
 public:
   BITMAP *bmp;
   Box box[256];
@@ -233,7 +236,7 @@ void getnn(BITMAP *ann, int x, int y, int &xp, int &yp);
 void minnn(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP *ann_prev, BITMAP *bmask, int level, int em_iter, RecomposeParams *rp=NULL, RegionMasks *region_masks=NULL, RegionMasks *amask=NULL, int ntiles=-1);
 
 
-class VECBITMAP_ARB { 
+class VECBITMAP_ARB {
 public:
   vector<unsigned> *data;
   int w, h;

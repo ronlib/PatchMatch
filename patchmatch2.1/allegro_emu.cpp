@@ -7,7 +7,7 @@ BITMAP *create_bitmap(int w, int h) {
   BITMAP *ans = new BITMAP(w, h);
   ans->data = new unsigned char[4*w*h]; // always 32bit
   ans->line = new unsigned char*[h];
-  for (int y = 0; y < h; y++) 
+  for (int y = 0; y < h; y++)
     ans->line[y] = &ans->data[y*4*w];
   return ans;
 }
@@ -25,8 +25,8 @@ void blit(BITMAP *a, BITMAP *b, int ax, int ay, int bx, int by, int w, int h) {
 
 void destroy_bitmap(BITMAP *bmp) {
 	if (bmp) {
-		delete[] bmp->line;
-		delete[] bmp->data;
+		if (bmp->line) delete[] bmp->line;
+		if (bmp->data) delete[] bmp->data;
 		delete bmp;
 	}
 }

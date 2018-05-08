@@ -5,7 +5,7 @@
 // fast_patch_dist:			taking adata, b_bitmap, and do early termination according to maxval
 // fast_patch_nobranch:	taking adata, b_bitmap, but NO early termination
 // patch_dist_ab:				taking a_bitmap, b_bitmap, and do early termination according to maxval
-// 
+//
 // Use template specialization to speed up for smaller patch sizes
 //
 
@@ -14,6 +14,8 @@
 
 #include "allegro_emu.h"
 #include "nn.h"
+#include "lua_inpaint.h"
+#include <time.h>
 
 #define USE_L1 0
 
@@ -28,6 +30,8 @@
 #endif
 #define DELTA_TERM DELTA_TERM_RGB_ex(dr, dg, db)
 #define DELTA_TERM_RGB(dr, dg, db) DELTA_TERM_RGB_ex(dr, dg, db)
+
+int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
 
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p) {
@@ -98,11 +102,21 @@ template<int PATCH_W, int IS_MASK, int IS_WINDOW>
 void attempt_n(int &err, int &xbest, int &ybest, int *adata, BITMAP *b, int bx, int by, BITMAP *bmask, RegionMasks *region_masks, int src_mask, Params *p) {
   if ((bx != xbest || by != ybest) &&
       (unsigned) bx < (unsigned) (b->w-PATCH_W+1) &&
-      (unsigned) by < (unsigned) (b->h-PATCH_W+1)) 
+      (unsigned) by < (unsigned) (b->h-PATCH_W+1))
 	{
     if (IS_MASK && region_masks && src_mask != ((int *) region_masks->bmp->line[by])[bx]) { return; }
     if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return; }
-    int current = fast_patch_dist<PATCH_W, IS_WINDOW>(adata, b, bx, by, err, p);
+		int current = 0;
+		clock_t start, end;
+		double cpu_time_used;
+		start = clock();
+		if (p->nn_dist == 1 && PATCH_W == 16) { current =  nn16_patch_dist(adata, b, bx, by, err, p); }
+
+		else { current = fast_patch_dist<PATCH_W, IS_WINDOW>(adata, b, bx, by, err, p); }
+		end = clock();
+		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+		fprintf(stderr, "%f sec\n", cpu_time_used);
+
     if (current < err) {
       err = current;
       xbest = bx;
@@ -174,7 +188,7 @@ int fast_patch_nobranch<7, 0>(int *adata, BITMAP *b, int bx, int by, Params *p);
 template<int TPATCH_W, int IS_WINDOW, int HAS_MASKS>
 int patch_dist_ab(Params *p, BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, RegionMasks *region_masks) {
   if (region_masks && ((int *) region_masks->bmp->line[ay])[ax] != ((int *) region_masks->bmp->line[by])[bx]) { return INT_MAX; }
-  
+
   if (IS_WINDOW) {
     int ans = 0;
     for (int dy = 0; dy < TPATCH_W; dy++) {

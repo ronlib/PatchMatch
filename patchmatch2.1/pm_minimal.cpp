@@ -46,9 +46,9 @@ PMBITMAP *pm_load_bitmap(const char *filename);
 void pm_save_bitmap(PMBITMAP *bmp, const char *filename);
 
 void check_im() {
-  if (system("identify > null.txt") != 0) {
-    fprintf(stderr, "ImageMagick must be installed, and 'convert' and 'identify' must be in the path\n"); exit(1);
-  }
+  // if (system("identify > null.txt") != 0) {
+  //   fprintf(stderr, "ImageMagick must be installed, and 'convert' and 'identify' must be in the path\n"); exit(1);
+  // }
 }
 
 BITMAP *load_bitmap(const char *filename) {
