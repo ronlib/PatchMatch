@@ -133,27 +133,27 @@ static int nn(lua_State *L)
 	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {p->cores = (int)luaL_checknumber(L, i);} i++;
 	if (nin >= i && !lua_isnil(L, i) && luaL_checkstring(L, i)) {amask = load_bitmap(luaL_checkstring(L, i));} i++;
 	if (nin >= i && !lua_isnil(L, i) && luaL_checkstring(L, i)) {bmask = load_bitmap(luaL_checkstring(L, i));} i++;
-	if (nin >= i+1 && luaL_checknumber(L, i)) {
+	if (nin >= i+1 && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
 		p->window_w = (int)luaL_checknumber(L, i); i++;
 		p->window_h = (int)luaL_checknumber(L, i);} i++;
 
 	// TODO: complete ann_prev
-	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i) && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete ann_window
-	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i) && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
 	// TODO: complete awinsize
-	if (nin >= i && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
+	if (nin >= i && !lua_isnil(L, i) && !lua_isnil(L, i)) {error(L, "Cannot currently handle this parameter\n");} i++;
 
-	if (nin >= i && luaL_checknumber(L, i)) {
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
 		knn_chosen = (int)luaL_checknumber(L, i);
 		if (knn_chosen == 1) { knn_chosen = -1; }
 		if (knn_chosen <= 0) { error(L, "knn is less than zero"); }
 		if (knn_chosen > 1) { error(L, "Does not currently support knn>1");}
 	} i++;
 
-	if (nin >= i && luaL_checknumber(L, i)) {
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
 		scalemax = luaL_checknumber(L, i);
 		if (scalemax <= 0) { error(L, "\nscalerange is less than zero"); }
     scalemin = 1.0/scalemax;
@@ -164,12 +164,16 @@ static int nn(lua_State *L)
     }
 	} i++;
 
+	if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+		p->nn_dist = (int)luaL_checknumber(L, i);
+	} i++;
+
 	if (ann_window&&!awinsize&&!win_size) {
     error(L, "\nUsing ann_window - either awinsize or win_size should be defined.\n");
   }
 
 	init_params(p);
-	p->nn_dist = 1;
+
 	RegionMasks *amaskm = amask ? new RegionMasks(p, amask): NULL;
 
 	BITMAP *ann = NULL; // NN field

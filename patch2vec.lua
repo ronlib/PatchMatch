@@ -19,7 +19,6 @@ end
 
 function compute_patches_distance_NN(patch1_storage_obj, patch2_storage_obj, H, W, num_channels)
 	 local patch1 = create_tensor_from_image_storage(patch1_storage_obj, H, W, num_channels)
-	 print(patch1)
 	 local patch2 = create_tensor_from_image_storage(patch2_storage_obj, H, W, num_channels)
 	 local v1 = NN:forward(patch1):clone()
 	 local v2 = NN:forward(patch2):clone()
