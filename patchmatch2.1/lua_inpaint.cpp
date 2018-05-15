@@ -15,6 +15,7 @@ extern "C" {
 #include "vecnn.h"
 #include "allegro_emu.h"
 #include "knn.h"
+#include "inpaint.h"
 
 #define MODE_IMAGE  0
 #define MODE_VECB   1
@@ -52,6 +53,7 @@ static int vote(lua_State *L);
 static int release_bitmap(lua_State *L);
 int push_ann_to_stack(lua_State *L, BITMAP *ann);
 void error (lua_State *L, const char *fmt, ...);
+int lua_inpaint(lua_State *L);
 
 static lua_State * g_L = 0;
 
@@ -64,6 +66,7 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 	static const luaL_Reg reg_inpaint_f[] = {
 		{"nn", nn},
 		{"vote", vote},
+		{"inpaint", lua_inpaint},
 		{NULL, NULL}
 	};
 
@@ -359,6 +362,77 @@ void error (lua_State *L, const char *fmt, ...) {
 	va_end(argp);
  	lua_close(L);
 	exit(EXIT_FAILURE);
+}
+
+int lua_inpaint(lua_State *L)
+{
+	int nin = lua_gettop(L);
+	int i = 1;
+
+	if (nin < 2)
+		{
+			error(L, "Not enough arguments");
+		}
+
+	const char * image_file_path = luaL_checkstring(L, i);	i++;
+	const char * mask_file_path = luaL_checkstring(L, i);	i++;
+
+	BITMAP *image = load_bitmap(image_file_path);
+	BITMAP *mask = load_bitmap(mask_file_path);
+
+	Params *p = new Params();
+	init_params(p);
+	inpaint(p, image, mask);
+
+	return 1;
+}
+
+
+void create_image_pyramid(BITMAP *image, int max_level)
+{
+	unsigned char *abuf;
+
+	int H = image->h, W = image->w;
+	abuf = (unsigned char*)calloc(H*W*3, sizeof(unsigned char));
+
+	for (int dy = 0 ; dy < H ; dy++) {
+		unsigned char *abufrow = &abuf[3*W*dy];
+		int *imrow = ((int *) image->line[dy]);
+		for (int dx = 0 ; dx < W ; dx++) {
+			int ad = imrow[dx];
+			unsigned char *ar = &abufrow[3*dx];
+			ar[0] = ad&255;			   	// r
+			ar[1] = (ad>>8)&255;		// g
+			ar[2] = (ad>>16)&255;		// b
+		}
+	}
+	// unsigned char *adata = image->data;
+
+	// for (int dy = 0 ; dy <  H; dy++) {
+	// 	unsigned char *arow = abuf + dy*W*3;
+	// 	for (int dx = 0 ; dx < W ; dx++) {
+	// 		int ad = adata[dy*W+dx];
+	// 		unsigned char *ar = &abuf[3*dy*W+3*dx];
+	// 		ar[0] = ad&255;			   	// r
+	// 		ar[1] = (ad>>8)&&255;		// g
+	// 		ar[2] = (ad>>16)&255;		// b
+	// 	}
+	// }
+
+	THByteStorage *a_th_storage;
+	a_th_storage = THByteStorage_newWithData(abuf, H*W*3);
+	lua_getglobal(g_L, "build_image_pyramid");
+	luaT_pushudata(g_L, a_th_storage, "torch.ByteStorage");
+	lua_pushnumber(g_L, H);
+	lua_pushnumber(g_L, W);
+	lua_pushnumber(g_L, 3);
+
+	if (lua_pcall(g_L, 4, 1, 0) != 0)
+		{
+			luaL_error(g_L, "error running function `f': %s",
+                 lua_tostring(g_L, -1));
+		}
+
 }
 
 

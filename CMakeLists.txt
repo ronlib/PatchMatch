@@ -73,6 +73,8 @@ add_library(patchmatch2 SHARED
 	patchmatch2.1/vecnn.cpp
 	patchmatch2.1/vecnn.h
 	patchmatch2.1/vecpatch.h
+	patchmatch2.1/inpaint.cpp
+	patchmatch2.1/inpaint.h
 	)
 
 target_include_directories(patchmatch2 PRIVATE ${LUA_INCLUDE_DIR}//lua5.1)

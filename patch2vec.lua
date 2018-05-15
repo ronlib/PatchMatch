@@ -1,6 +1,7 @@
 require 'torch'
 require 'nn'
 require 'dpnn'
+require 'image'
 
 
 function patch2vec_init(nn_file_path)
@@ -8,6 +9,7 @@ function patch2vec_init(nn_file_path)
 end
 
 function create_tensor_from_image_storage(storage, H, W, num_channels)
+	 -- local t = torch.ByteTensor(storage):float()/255
 	 local t = torch.ByteTensor(storage):float()/255
 	 t = t:view(num_channels, H, W)
 	 t = t:transpose(2,3):transpose(1,2)
@@ -25,4 +27,16 @@ function compute_patches_distance_NN(patch1_storage_obj, patch2_storage_obj, H, 
 	 -- Distance is 1-similarity
 	 local distance = 1-v1*v2
 	 return distance
+end
+
+function build_image_pyramid(image_byte_storage, H, W, num_channels)
+
+	 local t = torch.ByteTensor(image_byte_storage):float()/255
+
+	 t = t:view(H, W, num_channels)
+	 t = t:transpose(1,3):transpose(2,3)
+	 t = t:contiguous()
+	 -- torch.save("im.t7", t)
+	 image.save("pyramid_image.png", t)
+	 return 0;
 end
