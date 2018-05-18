@@ -388,9 +388,12 @@ int lua_inpaint(lua_State *L)
 }
 
 
-void create_image_pyramid(BITMAP *image, int max_level)
+BITMAP *downscale_image(BITMAP *image)
 {
 	unsigned char *abuf;
+	int ws, hs;
+	unsigned char *im_scaled;
+
 
 	int H = image->h, W = image->w;
 	abuf = (unsigned char*)calloc(H*W*3, sizeof(unsigned char));
@@ -406,33 +409,52 @@ void create_image_pyramid(BITMAP *image, int max_level)
 			ar[2] = (ad>>16)&255;		// b
 		}
 	}
-	// unsigned char *adata = image->data;
-
-	// for (int dy = 0 ; dy <  H; dy++) {
-	// 	unsigned char *arow = abuf + dy*W*3;
-	// 	for (int dx = 0 ; dx < W ; dx++) {
-	// 		int ad = adata[dy*W+dx];
-	// 		unsigned char *ar = &abuf[3*dy*W+3*dx];
-	// 		ar[0] = ad&255;			   	// r
-	// 		ar[1] = (ad>>8)&&255;		// g
-	// 		ar[2] = (ad>>16)&255;		// b
-	// 	}
-	// }
 
 	THByteStorage *a_th_storage;
 	a_th_storage = THByteStorage_newWithData(abuf, H*W*3);
+	// Telling Torch not to free memory (we do)
+	THByteStorage_clearFlag(a_th_storage, TH_STORAGE_FREEMEM);
 	lua_getglobal(g_L, "build_image_pyramid");
 	luaT_pushudata(g_L, a_th_storage, "torch.ByteStorage");
 	lua_pushnumber(g_L, H);
 	lua_pushnumber(g_L, W);
 	lua_pushnumber(g_L, 3);
 
-	if (lua_pcall(g_L, 4, 1, 0) != 0)
+	if (lua_pcall(g_L, 4, 4, 0) != 0)
 		{
 			luaL_error(g_L, "error running function `f': %s",
                  lua_tostring(g_L, -1));
 		}
 
+	// Free unused memory
+	free(abuf); abuf = 0;
+
+	if (luaL_checknumber(g_L, -3) && luaL_checknumber(g_L, -2) &&
+			luaL_checknumber(g_L, -1))
+		{
+			ws = luaL_checknumber(g_L, -1);
+			hs = luaL_checknumber(g_L, -2);
+			im_scaled = (unsigned char*)(long long)luaL_checknumber(g_L, -3);
+		}
+	else
+		luaL_error(g_L, "Returned non torch.ByteStorage from function");
+
+	BITMAP *ans = create_bitmap(ws, hs);
+	for (int dy = 0 ; dy < hs ; dy++)	{
+		unsigned char *ims_row = &im_scaled[ws*dy*3];
+		for (int dx = 0 ; dx < ws ; dx++)	{
+
+			unsigned char *ims_p = &ims_row[dx*3];
+			int *ans_p = &((int *) ans->line[dy])[dx];
+			*ans_p = ims_p[2]<<16 | ims_p[1]<<8 | ims_p[0];
+		}
+	}
+
+	lua_pop(g_L, 4);
+
+	// save_bitmap(ans, "pyramid_image_scaled.png");
+
+	return ans;
 }
 
 
@@ -445,18 +467,20 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
 	bbuf = (unsigned char*)calloc(16*16*3, sizeof(unsigned char));
 
 	for (int dy = 0 ; dy < 16 ; dy++) {
-		unsigned char *arow = abuf + dy*16*3;
+		unsigned char *abufrow = &abuf[3*16*dy];
+		unsigned char *bbufrow = &bbuf[3*16*dy];
+		int *arow = &adata[16*dy];
 		int *brow = ((int *) b->line[by+dy])+bx;
 		for (int dx = 0 ; dx < 16 ; dx++) {
-			int ad = adata[dx];
+			int ad = arow[dx];
 			int bd = brow[dx];
-			unsigned char *ar = &abuf[3*dx];
-			unsigned char *br = &bbuf[3*dx];
+			unsigned char *ar = &abufrow[3*dx];
+			unsigned char *br = &bbufrow[3*dx];
 			ar[0] = ad&255;			   	// r
-			ar[1] = (ad>>8)&&255;		// g
+			ar[1] = (ad>>8)&255;		// g
 			ar[2] = (ad>>16)&255;		// b
 			br[0] = bd&255;
-			br[1] = (bd>>8)&&255;
+			br[1] = (bd>>8)&255;
 			br[2] = (bd>>16)&255;
 		}
 	}

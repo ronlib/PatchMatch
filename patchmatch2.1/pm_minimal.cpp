@@ -131,7 +131,13 @@ void pm_save_bitmap(PMBITMAP *bmp, const char *filename) {
   if (!f) { fprintf(stderr, "Error writing image '%s': could not open raw temporary file\n", filename); exit(1); }
   unsigned char *p = (unsigned char *) bmp->data;
   for (int i = 0; i < bmp->w*bmp->h*4; i++) {
-    fputc(*p++, f);
+		if (i%4 == 3) {
+			fputc(255, f);
+			p++;
+		}
+    else
+			fputc(*p++, f);
+
   }
   fclose(f);
   sprintf(buf, "convert -size %dx%d -depth 8 rgba:%s %s", bmp->w, bmp->h, rawname, filename);
