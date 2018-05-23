@@ -169,7 +169,9 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
         }
       }
 
-      if (IS_MASK && bmask && ((int *) bmask->line[yp])[xp]) { row[x] = INT_MAX; continue; }
+      if (IS_MASK && bmask && ((int *) bmask->line[yp])[xp]) {
+        row[x] = INT_MAX; continue;
+      }
       row[x] = fast_patch_nobranch<PATCH_W, IS_WINDOW>(adata, b, xp, yp, p);
       //if (x == 1 && y == 1) { printf("1, 1 => %d, %d (%d)\n", xp, yp, row[x]); }
     }
@@ -581,6 +583,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
       for (int x = xstart; x != xfinal; x += xchange) {
         if (IS_MASK && amask && amask_row[x]) { continue; }
 
+        // TODO: this copying seems to have no use. Consider removing
         for (int dy0 = 0; dy0 < PATCH_W; dy0++) { // copy a patch from a
           int *drow = ((int *) a->line[y+dy0])+x;
           int *adata_row = adata+(dy0*PATCH_W);
@@ -612,28 +615,35 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                      (!bmask || !((int *) bmask->line[ypp])[xpp]) &&
                      (!amask || !((int *) amask->bmp->line[y])[x+dx]))
                    ))
+                // TODO: when using neural network, change this patch distance code
 							{
-                // faster way to calculate error with known error( Neighbor(ax,ay), MatchInB(Neighbor(ax,ay)) )
 								int err0 = ((int *) annd->line[y])[x+dx];
 
-                int xa = dx, xb = 0;
-                if (dx > 0) { xa = 0; xb = dx; }
-                int partial = 0;
-                for (int yi = 0; yi < PATCH_W; yi++) {
-                  int c1 = ((int *) a->line[y+yi])[x+xa];
-                  int c2 = ((int *) b->line[ypp+yi])[xpp+xa];
-                  int c3 = ((int *) a->line[y+yi])[x+xb+PATCH_W-1];
-                  int c4 = ((int *) b->line[ypp+yi])[xpp+xb+PATCH_W-1];
-                  int dr12 = (c1&255)-(c2&255);
-                  int dg12 = ((c1>>8)&255)-((c2>>8)&255);
-                  int db12 = (c1>>16)-(c2>>16);
-                  int dr34 = (c3&255)-(c4&255);
-                  int dg34 = ((c3>>8)&255)-((c4>>8)&255);
-                  int db34 = (c3>>16)-(c4>>16);
-                  partial +=  dr34*dr34+dg34*dg34+db34*db34
-                             -dr12*dr12-dg12*dg12-db12*db12;
+                if (p->nn_dist == 1 && PATCH_W == 16) {
+                  err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
                 }
+                else {
+                  // faster way to calculate error with known error( Neighbor(ax,ay), MatchInB(Neighbor(ax,ay)) )
+
+                  int xa = dx, xb = 0;
+                  if (dx > 0) { xa = 0; xb = dx; }
+                  int partial = 0;
+                  for (int yi = 0; yi < PATCH_W; yi++) {
+                    int c1 = ((int *) a->line[y+yi])[x+xa];
+                    int c2 = ((int *) b->line[ypp+yi])[xpp+xa];
+                    int c3 = ((int *) a->line[y+yi])[x+xb+PATCH_W-1];
+                    int c4 = ((int *) b->line[ypp+yi])[xpp+xb+PATCH_W-1];
+                    int dr12 = (c1&255)-(c2&255);
+                    int dg12 = ((c1>>8)&255)-((c2>>8)&255);
+                    int db12 = (c1>>16)-(c2>>16);
+                    int dr34 = (c3&255)-(c4&255);
+                    int dg34 = ((c3>>8)&255)-((c4>>8)&255);
+                    int db34 = (c3>>16)-(c4>>16);
+                    partial +=  dr34*dr34+dg34*dg34+db34*db34
+                      -dr12*dr12-dg12*dg12-db12*db12;
+                  }
                 err0 += (dx < 0) ? partial: -partial;
+              }
                 if (err0 < err) {
                   err = err0;
                   xbest = xpp;
@@ -657,28 +667,33 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                   )) {
                 int err0 = ((int *) annd->line[y+dy])[x];
 
-                int ya = dy, yb = 0;
-                if (dy > 0) { ya = 0; yb = dy; }
-                int partial = 0;
-                int *c1row = &((int *) a->line[y+ya])[x];
-                int *c2row = &((int *) b->line[ypp+ya])[xpp];
-                int *c3row = &((int *) a->line[y+yb+PATCH_W-1])[x];
-                int *c4row = &((int *) b->line[ypp+yb+PATCH_W-1])[xpp];
-                for (int xi = 0; xi < PATCH_W; xi++) {
-                  int c1 = c1row[xi];
-                  int c2 = c2row[xi];
-                  int c3 = c3row[xi];
-                  int c4 = c4row[xi];
-                  int dr12 = (c1&255)-(c2&255);
-                  int dg12 = ((c1>>8)&255)-((c2>>8)&255);
-                  int db12 = (c1>>16)-(c2>>16);
-                  int dr34 = (c3&255)-(c4&255);
-                  int dg34 = ((c3>>8)&255)-((c4>>8)&255);
-                  int db34 = (c3>>16)-(c4>>16);
-                  partial +=  dr34*dr34+dg34*dg34+db34*db34
-                             -dr12*dr12-dg12*dg12-db12*db12;
+                if (p->nn_dist == 1 && PATCH_W == 16) {
+                  err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
                 }
-                err0 += (dy < 0) ? partial: -partial;
+                else {
+                  int ya = dy, yb = 0;
+                  if (dy > 0) { ya = 0; yb = dy; }
+                  int partial = 0;
+                  int *c1row = &((int *) a->line[y+ya])[x];
+                  int *c2row = &((int *) b->line[ypp+ya])[xpp];
+                  int *c3row = &((int *) a->line[y+yb+PATCH_W-1])[x];
+                  int *c4row = &((int *) b->line[ypp+yb+PATCH_W-1])[xpp];
+                  for (int xi = 0; xi < PATCH_W; xi++) {
+                    int c1 = c1row[xi];
+                    int c2 = c2row[xi];
+                    int c3 = c3row[xi];
+                    int c4 = c4row[xi];
+                    int dr12 = (c1&255)-(c2&255);
+                    int dg12 = ((c1>>8)&255)-((c2>>8)&255);
+                    int db12 = (c1>>16)-(c2>>16);
+                    int dr34 = (c3&255)-(c4&255);
+                    int dg34 = ((c3>>8)&255)-((c4>>8)&255);
+                    int db34 = (c3>>16)-(c4>>16);
+                    partial +=  dr34*dr34+dg34*dg34+db34*db34
+                      -dr12*dr12-dg12*dg12-db12*db12;
+                  }
+                  err0 += (dy < 0) ? partial: -partial;
+                }
                 if (err0 < err) {
                   err = err0;
                   xbest = xpp;
@@ -1439,7 +1454,10 @@ Box get_abox(Params *p, BITMAP *a, RegionMasks *amask, int trim_patch) {
   }
   Box ans = amask->box[0];
   //save_bitmap("amask.bmp", amask->bmp, NULL);
-  if (ans.xmin < 0 || ans.ymin < 0 || ans.xmax > a->w-p->patch_w+1 || ans.ymax > a->h-p->patch_w+1) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, 0, 0, a->w-p->patch_w+1, a->h-p->patch_w+1); exit(1); }
+
+  // TODO: resore the next condition
+  if (!p->center_box && (ans.xmin < 0 || ans.ymin < 0 || ans.xmax > a->w-p->patch_w+1 || ans.ymax > a->h-p->patch_w+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, 0, 0, a->w-p->patch_w+1, a->h-p->patch_w+1); exit(1); }
+  if (p->center_box && (ans.xmin < p->patch_w/2 || ans.ymin < p->patch_w/2 || ans.xmax > a->w-p->patch_w/2+1 || ans.ymax > a->h-p->patch_w/2+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, p->patch_w/2, p->patch_w/2, a->w-p->patch_w/2+1, a->h-p->patch_w/2+1); exit(1); }
   if (ans.xmin >= ans.xmax || ans.ymin >= ans.ymax) { ans.xmin = ans.ymin = 0; ans.xmax = ans.ymax = 1; } //fprintf(stderr, "box size 0 (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax); exit(1); }
   // FIXME: Instead, set box size to 1 at (0,0) if it has size zero
   printf("get_abox (%dx%d) => %d %d %d %d\n", a->w, a->h, ans.xmin, ans.ymin, ans.xmax, ans.ymax);

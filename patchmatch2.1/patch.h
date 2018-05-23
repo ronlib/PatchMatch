@@ -35,7 +35,11 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
 
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p) {
-  if (IS_WINDOW) {
+  if (p->nn_dist == 1 && TPATCH_W == 16) {
+    int ans = nn16_patch_dist(adata, b, bx, by, 0, p);
+    return ans;
+  }
+  else if (IS_WINDOW) {
     int ans = 0;
     for (int dy = 0; dy < TPATCH_W; dy++) {
       int *row2 = ((int *) b->line[by+dy])+bx;
@@ -128,7 +132,11 @@ void attempt_n(int &err, int &xbest, int &ybest, int *adata, BITMAP *b, int bx, 
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_nobranch(int *adata, BITMAP *b, int bx, int by, Params *p) {
   //if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return INT_MAX; }
-  if (IS_WINDOW) {
+  if (p->nn_dist == 1 && TPATCH_W == 16) {
+    int ans = nn16_patch_dist(adata, b, bx, by, 0, p);
+    return ans;
+  }
+  else if (IS_WINDOW) {
     int ans = 0;
     for (int dy = 0; dy < TPATCH_W; dy++) {
       int *row2 = ((int *) b->line[by+dy])+bx;
@@ -189,7 +197,12 @@ template<int TPATCH_W, int IS_WINDOW, int HAS_MASKS>
 int patch_dist_ab(Params *p, BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, RegionMasks *region_masks) {
   if (region_masks && ((int *) region_masks->bmp->line[ay])[ax] != ((int *) region_masks->bmp->line[by])[bx]) { return INT_MAX; }
 
-  if (IS_WINDOW) {
+  if (p->nn_dist == 1 && TPATCH_W == 16) {
+    int ans = nn16_patch_dist_ab(a, ax, ay, b, bx, by, 0, p); // maxval has no meaning
+                                                              //  when using neural network
+    return ans;
+  }
+  else if (IS_WINDOW) {
     int ans = 0;
     for (int dy = 0; dy < TPATCH_W; dy++) {
       int *row1 = ((int *) a->line[ay+dy])+ax;

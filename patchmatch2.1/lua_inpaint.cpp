@@ -16,6 +16,7 @@ extern "C" {
 #include "allegro_emu.h"
 #include "knn.h"
 #include "inpaint.h"
+#include "lua_inpaint.h"
 
 #define MODE_IMAGE  0
 #define MODE_VECB   1
@@ -47,7 +48,6 @@ extern "C" {
 #endif
 
 BITMAP *load_bitmap(const char *filename);
-void save_bitmap(BITMAP *bmp, const char *filename);
 static int nn(lua_State *L);
 static int vote(lua_State *L);
 static int release_bitmap(lua_State *L);
@@ -381,6 +381,10 @@ int lua_inpaint(lua_State *L)
 	BITMAP *mask = load_bitmap(mask_file_path);
 
 	Params *p = new Params();
+  p->patch_w = 16;
+  p->nn_dist = 1;
+  // p->center_box = 1;
+  p->nn_iters = 5;
 	init_params(p);
 	inpaint(p, image, mask);
 
@@ -458,6 +462,21 @@ BITMAP *downscale_image(BITMAP *image)
 }
 
 
+int nn16_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, Params *p)
+{
+  int adata[16*16];
+  for (int dy = 0 ; dy < 16 ; dy++) { // copy a patch from a to adata
+    int *drow = ((int *) a->line[ay+dy])+ax;
+    int *adata_row = adata+(dy*16);
+    for (int dx = 0 ; dx < 16 ; dx++) {
+      adata_row[dx] = drow[dx];
+    }
+  }
+
+  return nn16_patch_dist(adata, b, bx, by, 0, p);
+}
+
+
 int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
 {
 	if (16 != p->patch_w) { fprintf(stderr, "nn16_patch_dist should be called with p->patch_w==16\n"); exit(1); }
@@ -502,8 +521,8 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
                  lua_tostring(g_L, -1));
 		}
 
-	int lua_return_val = (int)luaL_checknumber(g_L, -1);
+	int lua_return_val = (int)(luaL_checknumber(g_L, -1)*INT_MAX);
 	lua_pop(g_L, 1);
 
-	return 0;
+	return lua_return_val;
 }

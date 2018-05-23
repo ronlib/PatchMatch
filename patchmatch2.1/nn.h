@@ -128,6 +128,7 @@ class Params { public:
   int do_enrich;
 
 	int nn_dist;           /* Should use NN comparison (only if PATCH_W==16). */
+  int center_box;        /* 0 if the box should be in the upper-left corner.  */
 
   /* Defaults. */
   Params()
@@ -166,7 +167,8 @@ class Params { public:
      enrich_times(1),
      do_inverse_enrich(1),
 		do_enrich(1),
-		nn_dist(0)
+		nn_dist(0),
+    center_box(0)
      { }
 };
 
