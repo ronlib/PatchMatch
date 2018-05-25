@@ -22,6 +22,7 @@ extern "C" {
 #define MODE_VECB   1
 #define MODE_VECF   2
 
+
 #if defined _WIN32 || defined __CYGWIN__
   #ifdef BUILDING_DLL
     #ifdef __GNUC__
@@ -47,6 +48,13 @@ extern "C" {
   #endif
 #endif
 
+typedef struct TorchImageStorage
+{
+  THByteStorage *storage;
+  unsigned char *buffer;
+} TorchImageStorage;
+
+
 BITMAP *load_bitmap(const char *filename);
 static int nn(lua_State *L);
 static int vote(lua_State *L);
@@ -54,6 +62,13 @@ static int release_bitmap(lua_State *L);
 int push_ann_to_stack(lua_State *L, BITMAP *ann);
 void error (lua_State *L, const char *fmt, ...);
 int lua_inpaint(lua_State *L);
+
+/*
+  This function allocates a new THByteStorage and converts the BITMAP format.
+  Notice: The
+*/
+TorchImageStorage convert_to_torch_image(BITMAP *image);
+BITMAP *convert_to_bitmap(unsigned char* im_buf, int w, int h);
 
 static lua_State * g_L = 0;
 
@@ -392,18 +407,14 @@ int lua_inpaint(lua_State *L)
 }
 
 
-BITMAP *downscale_image(BITMAP *image)
+TorchImageStorage convert_to_torch_image(BITMAP *image)
 {
-	unsigned char *abuf;
-	int ws, hs;
-	unsigned char *im_scaled;
-
-
-	int H = image->h, W = image->w;
-	abuf = (unsigned char*)calloc(H*W*3, sizeof(unsigned char));
+  TorchImageStorage ans = {0};
+  int H = image->h, W = image->w;
+	ans.buffer = (unsigned char*)calloc(H*W*3, sizeof(unsigned char));
 
 	for (int dy = 0 ; dy < H ; dy++) {
-		unsigned char *abufrow = &abuf[3*W*dy];
+		unsigned char *abufrow = &ans.buffer[3*W*dy];
 		int *imrow = ((int *) image->line[dy]);
 		for (int dx = 0 ; dx < W ; dx++) {
 			int ad = imrow[dx];
@@ -413,40 +424,21 @@ BITMAP *downscale_image(BITMAP *image)
 			ar[2] = (ad>>16)&255;		// b
 		}
 	}
+  ans.storage = THByteStorage_newWithData(ans.buffer, H*W*3);
 
-	THByteStorage *a_th_storage;
-	a_th_storage = THByteStorage_newWithData(abuf, H*W*3);
 	// Telling Torch not to free memory (we do)
-	THByteStorage_clearFlag(a_th_storage, TH_STORAGE_FREEMEM);
-	lua_getglobal(g_L, "build_image_pyramid");
-	luaT_pushudata(g_L, a_th_storage, "torch.ByteStorage");
-	lua_pushnumber(g_L, H);
-	lua_pushnumber(g_L, W);
-	lua_pushnumber(g_L, 3);
+	THByteStorage_clearFlag(ans.storage, TH_STORAGE_FREEMEM);
+  return ans;
+}
 
-	if (lua_pcall(g_L, 4, 4, 0) != 0)
-		{
-			luaL_error(g_L, "error running function `f': %s",
-                 lua_tostring(g_L, -1));
-		}
 
-	// Free unused memory
-	free(abuf); abuf = 0;
+BITMAP *convert_to_bitmap(unsigned char* im_buf, int w, int h)
+{
+  BITMAP * ans = create_bitmap(w, h);
 
-	if (luaL_checknumber(g_L, -3) && luaL_checknumber(g_L, -2) &&
-			luaL_checknumber(g_L, -1))
-		{
-			ws = luaL_checknumber(g_L, -1);
-			hs = luaL_checknumber(g_L, -2);
-			im_scaled = (unsigned char*)(long long)luaL_checknumber(g_L, -3);
-		}
-	else
-		luaL_error(g_L, "Returned non torch.ByteStorage from function");
-
-	BITMAP *ans = create_bitmap(ws, hs);
-	for (int dy = 0 ; dy < hs ; dy++)	{
-		unsigned char *ims_row = &im_scaled[ws*dy*3];
-		for (int dx = 0 ; dx < ws ; dx++)	{
+  for (int dy = 0 ; dy < h ; dy++)	{
+		unsigned char *ims_row = &im_buf[w*dy*3];
+		for (int dx = 0 ; dx < w ; dx++)	{
 
 			unsigned char *ims_p = &ims_row[dx*3];
 			int *ans_p = &((int *) ans->line[dy])[dx];
@@ -454,10 +446,50 @@ BITMAP *downscale_image(BITMAP *image)
 		}
 	}
 
-	lua_pop(g_L, 4);
+  return ans;
+}
 
+
+BITMAP *downscale_image(BITMAP *image)
+{
+  return scale_image(image, image->h/2, image->w/2);
+}
+
+
+BITMAP *scale_image(BITMAP *image, int hs, int ws)
+{
+	unsigned char *im_scaled;
+
+  TorchImageStorage torch_image = convert_to_torch_image(image);
+
+	lua_getglobal(g_L, "scale_image");
+	luaT_pushudata(g_L, torch_image.storage, "torch.ByteStorage");
+	lua_pushnumber(g_L, image->h);
+	lua_pushnumber(g_L, image->w);
+	lua_pushnumber(g_L, hs);
+	lua_pushnumber(g_L, ws);
+	lua_pushnumber(g_L, 3);
+
+	if (lua_pcall(g_L, 6, 2, 0) != 0)
+		{
+			luaL_error(g_L, "error running function `f': %s",
+                 lua_tostring(g_L, -1));
+		}
+
+	// Free unused memory
+	free(torch_image.buffer);
+
+	if (luaL_checknumber(g_L, -1))
+		{
+			im_scaled = (unsigned char*)(long long)luaL_checknumber(g_L, -1);
+		}
+	else
+		luaL_error(g_L, "Returned non torch.ByteStorage from function");
+
+  BITMAP *ans = convert_to_bitmap(im_scaled, ws, hs);
+
+	lua_pop(g_L, 2);
 	// save_bitmap(ans, "pyramid_image_scaled.png");
-
 	return ans;
 }
 
