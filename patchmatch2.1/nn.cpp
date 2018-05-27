@@ -1455,9 +1455,10 @@ Box get_abox(Params *p, BITMAP *a, RegionMasks *amask, int trim_patch) {
   Box ans = amask->box[0];
   //save_bitmap("amask.bmp", amask->bmp, NULL);
 
+  if (ans.xmin < 0 || ans.ymin < 0 || ans.xmax > a->w-p->patch_w+1 || ans.ymax > a->h-p->patch_w+1) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, 0, 0, a->w-p->patch_w+1, a->h-p->patch_w+1); exit(1); }
   // TODO: resore the next condition
-  if (!p->center_box && (ans.xmin < 0 || ans.ymin < 0 || ans.xmax > a->w-p->patch_w+1 || ans.ymax > a->h-p->patch_w+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, 0, 0, a->w-p->patch_w+1, a->h-p->patch_w+1); exit(1); }
-  if (p->center_box && (ans.xmin < p->patch_w/2 || ans.ymin < p->patch_w/2 || ans.xmax > a->w-p->patch_w/2+1 || ans.ymax > a->h-p->patch_w/2+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, p->patch_w/2, p->patch_w/2, a->w-p->patch_w/2+1, a->h-p->patch_w/2+1); exit(1); }
+  // if (!p->center_box && (ans.xmin < 0 || ans.ymin < 0 || ans.xmax > a->w-p->patch_w+1 || ans.ymax > a->h-p->patch_w+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, 0, 0, a->w-p->patch_w+1, a->h-p->patch_w+1); exit(1); }
+  // if (p->center_box && (ans.xmin < p->patch_w/2 || ans.ymin < p->patch_w/2 || ans.xmax > a->w-p->patch_w/2+1 || ans.ymax > a->h-p->patch_w/2+1)) { fprintf(stderr, "box out of range %d %d %d %d (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax, p->patch_w/2, p->patch_w/2, a->w-p->patch_w/2+1, a->h-p->patch_w/2+1); exit(1); }
   if (ans.xmin >= ans.xmax || ans.ymin >= ans.ymax) { ans.xmin = ans.ymin = 0; ans.xmax = ans.ymax = 1; } //fprintf(stderr, "box size 0 (%d %d %d %d)\n", ans.xmin, ans.ymin, ans.xmax, ans.ymax); exit(1); }
   // FIXME: Instead, set box size to 1 at (0,0) if it has size zero
   printf("get_abox (%dx%d) => %d %d %d %d\n", a->w, a->h, ans.xmin, ans.ymin, ans.xmax, ans.ymax);

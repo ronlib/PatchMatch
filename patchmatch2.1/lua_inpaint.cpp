@@ -348,8 +348,10 @@ static int vote(lua_State *L)
 		{ error(L, "Does not currently support ainit\n"); } i++;
 
 	RegionMasks *amaskm = amask ? new RegionMasks(p, amask): NULL;
+  amask = NULL;   // amask is now managed by amaskm
 	a = vote(p, b, ann, bnn, bmask, bweight, coherence_weight, complete_weight, amaskm, aweight, ainit, NULL, NULL, 1);
 
+  // This function also destroys amask;
 	destroy_region_masks(amaskm);
 	const char* ans_file_path = "/tmp/vote.bmp";
 	save_bitmap(a, ans_file_path);
@@ -400,6 +402,7 @@ int lua_inpaint(lua_State *L)
   p->nn_dist = 1;
   // p->center_box = 1;
   p->nn_iters = 5;
+  p->inpaint_border = 5;
 	init_params(p);
 	inpaint(p, image, mask);
 
