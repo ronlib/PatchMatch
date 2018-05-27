@@ -38,8 +38,8 @@ BITMAP *threshold_image(BITMAP *image, unsigned char threshold);
   image and ann arguments are freed and reallocated.
 */
 // TODO: return image and ann using Upscaleinpintedimageretval
-void upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP **image,
-                      BITMAP **ann, int to_level);
+UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP *image,
+                      BITMAP *ann, int to_level);
 
 /*
   This function goes over the mask, looking for masked pixels which are at most
@@ -102,7 +102,10 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
   delete amask;
   save_bitmap(ret_inpainted, "ans.bmp");
 
-  upscale_image_nn(p, &pyramid, &ret_inpainted, &ann, pyramid.max_pyramid_level-2);
+  UpscaleInpintedImageRetVal upscaled = upscale_image_nn(p, &pyramid, ret_inpainted, ann, pyramid.max_pyramid_level-2);
+  destroy_bitmap(ret_inpainted);
+  destroy_bitmap(ann);
+
   save_bitmap(ret_inpainted, "ans2.bmp");
   timage = pyramid.masks_pyramid[pyramid.max_pyramid_level-2];
   tmask = pyramid.masks_pyramid[pyramid.max_pyramid_level-2];
@@ -149,22 +152,23 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
 }
 
 
-void upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP **image,
-                                 BITMAP **ann, int to_level)
+UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP *image,
+                                 BITMAP *ann, int to_level)
 {
+  UpscaleInpintedImageRetVal ans = {};
   int h = pyramid->images_pyramid[to_level]->h, w = pyramid->images_pyramid[to_level]->w;
 
   // Some sanity checks
-  if ((*image)->h >= h || (*image)->w >= w) {
+  if ((image)->h >= h || (image)->w >= w) {
     fprintf(stderr, "upscale_image: the target image must be of higher "\
             "resolution");
     exit(1);
   }
 
   // 1. upscale image
-  BITMAP *nimage = scale_image(*image, h, w);
+  BITMAP *nimage = scale_image(image, h, w);
   // Original image is unnecessary now
-  destroy_bitmap(*image); *image = NULL;
+  // destroy_bitmap(image); image = NULL;
 
   BITMAP *nann = create_bitmap(w, h);
 
@@ -176,7 +180,7 @@ void upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP **image,
   for (int y = 0; y < h; y++) {
     int *nrow = (int *) nimage->line[y];
     int *orig_row = (int *)pyramid->images_pyramid[to_level]->line[y];
-    int *annrow = (int *)(*ann)->line[y/2];
+    int *annrow = (int *)(ann)->line[y/2];
     int *nannrow = (int *)nann->line[y];
     for (int x = 0; x < w; x++) {
       if (!is_point_in_box(y, x, b, p->inpaint_border)) {
@@ -189,9 +193,11 @@ void upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP **image,
     }
   }
 
-  *image = nimage;
-  destroy_bitmap(*ann);
-  *ann = nann;
+  image = nimage;
+  // destroy_bitmap(ann);
+  ans.ann = nann;
+  ans.image = nimage;
+  return ans;
 }
 
 
