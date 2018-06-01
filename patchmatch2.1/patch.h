@@ -111,15 +111,16 @@ void attempt_n(int &err, int &xbest, int &ybest, int *adata, BITMAP *b, int bx, 
     if (IS_MASK && region_masks && src_mask != ((int *) region_masks->bmp->line[by])[bx]) { return; }
     if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return; }
 		int current = 0;
-		clock_t start, end;
-		double cpu_time_used;
-		start = clock();
+
+		/* clock_t start, end; */
+		/* double cpu_time_used; */
+		/* start = clock(); */
 		if (p->nn_dist == 1 && PATCH_W == 16) { current =  nn16_patch_dist(adata, b, bx, by, err, p); }
 
 		else { current = fast_patch_dist<PATCH_W, IS_WINDOW>(adata, b, bx, by, err, p); }
-		end = clock();
-		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-		fprintf(stderr, "%f sec\n", cpu_time_used);
+		/* end = clock(); */
+		/* cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC; */
+		/* printf("%f sec\n", cpu_time_used); */
 
     if (current < err) {
       err = current;

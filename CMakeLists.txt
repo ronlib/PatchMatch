@@ -78,3 +78,11 @@ add_library(patchmatch2 SHARED
 	)
 
 target_include_directories(patchmatch2 PRIVATE ${LUA_INCLUDE_DIR}//lua5.1)
+
+OPTION(INPAINT_VERBOSE "Make inpainting algorithm verbose" OFF) # Disabled by default
+IF(INPAINT_VERBOSE)
+  # ADD_DEFINITIONS(-DMACRO)
+  target_compile_definitions(patchmatch2 PRIVATE IS_VERBOSE=1)
+ELSE(INPAINT_VERBOSE)
+  target_compile_definitions(patchmatch2 PRIVATE IS_VERBOSE=0)
+ENDIF(INPAINT_VERBOSE)

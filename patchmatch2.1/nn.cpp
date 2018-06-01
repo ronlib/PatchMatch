@@ -154,6 +154,8 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
     int *arow = amask ? (int *) amask->bmp->line[y]: NULL;
     for (int x = box.xmin; x < box.xmax; x++) {
       if (IS_MASK && amask && arow[x]) { continue; }
+      printf("init_dist_n: y=%d\n", y);
+
       int xp, yp;
       getnn(ann, x, y, xp, yp);
 
@@ -553,7 +555,8 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 					BITMAP *ann_window, BITMAP *awinsize)
 {
 
-  printf("in nn_n, masks are: %p %p %p, tiles=%d\n", amask, bmask, region_masks, tiles);
+  printf("in nn_n, masks are: %p %p %p, tiles=%d, iters=%d\n", amask, bmask,
+         region_masks, tiles, p->nn_iters);
   Box box = get_abox(p, a, amask);
   int nn_iter = 0;
 
@@ -582,6 +585,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
       int *amask_row = IS_MASK ? (amask ? (int *) amask->bmp->line[y]: NULL): NULL;
       for (int x = xstart; x != xfinal; x += xchange) {
         if (IS_MASK && amask && amask_row[x]) { continue; }
+        printf("nn_n: line %d, iter=%d\n", y, nn_iter);
 
         // TODO: this copying seems to have no use. Consider removing
         for (int dy0 = 0; dy0 < PATCH_W; dy0++) { // copy a patch from a
@@ -749,6 +753,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 
         ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
         ((int *) annd->line[y])[x] = err;
+        printf("Chose (%d,%d) as NN for (%d,%d), distance=%#08x\n", xbest, ybest, x, y, err);
       }
     }
   }
@@ -2508,7 +2513,9 @@ void minnn_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP 
   pcopy.nn_iters = rp->minnn_optp_nn_iters;
   pcopy.rs_max = rp->minnn_optp_rs_max;
 
-  nn(&pcopy, a, b, ann, annd, amask, bmask, level, em_iter, rp, 0, 0, 1, region_masks, ntiles);
+  // TODO: Decide if this function should be called
+  nn(&pcopy, a, b, ann, annd, amask, bmask, level, em_iter, rp, 0, 0,
+     /*cache_b=*/1, region_masks, ntiles);
 }
 
 void minnn(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *annd, BITMAP *ann_prev, BITMAP *bmask, int level, int em_iter, RecomposeParams *rp, RegionMasks *region_masks, RegionMasks *amask, int ntiles) {

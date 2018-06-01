@@ -401,8 +401,9 @@ int lua_inpaint(lua_State *L)
   p->patch_w = 16;
   p->nn_dist = 1;
   // p->center_box = 1;
-  p->nn_iters = 5;
-  p->inpaint_border = 5;
+  p->nn_iters = 3;
+  p->inpaint_border = 2;
+  p->max_inpaint_levels = 1;
 	init_params(p);
 	inpaint(p, image, mask);
 
@@ -516,6 +517,10 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
 {
 	if (16 != p->patch_w) { fprintf(stderr, "nn16_patch_dist should be called with p->patch_w==16\n"); exit(1); }
 
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
+
 	unsigned char *abuf, *bbuf;
 	abuf = (unsigned char*)calloc(16*16*3, sizeof(unsigned char));
 	bbuf = (unsigned char*)calloc(16*16*3, sizeof(unsigned char));
@@ -558,6 +563,10 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
 
 	int lua_return_val = (int)(luaL_checknumber(g_L, -1)*INT_MAX);
 	lua_pop(g_L, 1);
+
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  printf("%f sec\n", cpu_time_used);
 
 	return lua_return_val;
 }

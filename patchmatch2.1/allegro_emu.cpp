@@ -58,3 +58,22 @@ BITMAP *create_bitmap_ex(int depth, int w, int h) {
   if (depth != 32) { fprintf(stderr, "depth not supported for create_bitmap_ex: %d\n", depth); exit(1); }
   return create_bitmap(w, h);
 }
+
+BITMAP::BITMAP(const BITMAP &b)
+{
+  BITMAP *ans = create_bitmap(b.w, b.h);
+  this->line = ans->line;
+  this->data = ans->data;
+  this->w = b.w;
+  this->h = b.h;
+  // Just wanted to make use of the line and data assignments
+  delete ans;
+
+  for (int y = 0 ; y < this->h ; y++) {
+    int *row = (int *)b.line[y];
+    int *thisrow = (int *)this->line[y];
+    for (int x = 0 ; x < this->w ; x++) {
+      thisrow[x] = row[x];
+    }
+  }
+}

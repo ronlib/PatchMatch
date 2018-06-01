@@ -109,6 +109,7 @@ PMBITMAP *pm_load_bitmap(const char *filename) {
 			}
 	}
   fclose(f);
+  remove(rawname);
   return ans;
 }
 
@@ -140,8 +141,10 @@ void pm_save_bitmap(PMBITMAP *bmp, const char *filename) {
 
   }
   fclose(f);
+
   sprintf(buf, "convert -size %dx%d -depth 8 rgba:%s %s", bmp->w, bmp->h, rawname, filename);
   if (system(buf) != 0) { fprintf(stderr, "Error writing image '%s': ImageMagick convert gave an error\n", filename); exit(1); }
+  remove(rawname);
 }
 
 /* -------------------------------------------------------------------------
