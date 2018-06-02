@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include <unistd.h>
+#include <cassert>
 
 #include "nn.h"
 #include "lua_inpaint.h"
@@ -45,12 +46,18 @@ UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP 
   This function goes over the mask, looking for masked pixels which are at most
   min_edge_distance from the right or lower border, and moves it upwards or
   left (or both).
+  Next, it goes over each masked pixel, moves it half a patch up and left, so
+  it sould be at the center of the patch for which a nearest neighbour will be
+  searched for. This translation must be accounted for in upscale_image_nn.
 
   Returns a new mask.
-
 */
 BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance);
 void draw_box_around_mask_point(BITMAP *mask, int y, int x, int border);
+
+#define CENTER_MASK_PIXEL(p, position) position-p->patch_w/2
+#define UNCENTER_MASK_PIXEL(p, position) position+p->patch_w/2
+
 
 typedef struct MaskTransformationParameters
 {
@@ -103,7 +110,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
     if (level == pyramid.max_pyramid_level-1) {
       ann = init_nn(p, timage, timage, /*bmask=*/tmask, /*region_masks=*/NULL,
                     /*amask=*/ tamask, /*trim_patch=*/ 1, NULL, NULL);
-      copy_unmasked_nnf_regions(p, timage, tamask, ann);
+      // copy_unmasked_nnf_regions(p, timage, tamask, ann);
       inpainted_image = inpaint_image(p, timage, tmask, tamask, ann);
       snprintf(filename, sizeof(filename)/sizeof(char),
                "inpainted_image_level_%d.png", level);
@@ -120,7 +127,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
 
       ann = upscaled.ann;
       // TODO: copy the unmasked pixels from the original image. vote() does not do that.
-      copy_unmasked_nnf_regions(p, timage, tamask, ann);
+      // copy_unmasked_nnf_regions(p, timage, tamask, ann);
       inpainted_image = inpaint_image(p, upscaled.image, tmask, tamask, ann);
       destroy_bitmap(upscaled.image);
       snprintf(filename, sizeof(filename)/sizeof(char),
@@ -238,17 +245,35 @@ UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP 
 
   RegionMasks rg(p, pyramid->inv_masks_pyramid[to_level], 0, NULL);
   // Assuming masks hold the value 0xff
-  Box b = rg.box[255];
+  Box b = rg.box[0];
 
   // 2. copy high resolution parts from the the to_level image, set the new mask from
   for (int y = 0; y < h; y++) {
     int *nrow = (int *) nimage->line[y];
-    int *orig_row = (int *)pyramid->images_pyramid[to_level]->line[y];
+    int *orig_row = (int *)(pyramid->images_pyramid[to_level]->line[y]);
     int *annrow = (int *)(ann)->line[y/2];
     int *nannrow = (int *)nann->line[y];
+    int *invmaskr = (int *) pyramid->inv_masks_pyramid[to_level]->line[y];
+    int ny = CENTER_MASK_PIXEL(p, y);
     for (int x = 0; x < w; x++) {
-      if (!is_point_in_box(y, x, b, p->inpaint_border)) {
+      // TODO: Consider not using is_point_in_box, as the box is transformed to
+      //       surround the masked regions
+      // if (!is_point_in_box(y, x, b, p->inpaint_border)) {
+      // assert(UNCENTER_MASK_PIXEL(p, x) < w);
+      // assert(UNCENTER_MASK_PIXEL(p, y) < h);
+      int nx = CENTER_MASK_PIXEL(p, x);
+
+      // If the uncentered pixel of (x,y) is not masked, just copy the pixel
+      if (!(ny >= 0 && nx >= 0 && !((int *)pyramid->inv_masks_pyramid[to_level]->line[ny])[nx])) {
         nrow[x] = orig_row[x];
+      }
+
+      if (invmaskr[x]) {
+        // nrow[x] = orig_row[x];
+
+        // ((int *)nimage->line[ny])[nx] =
+        //   ((int *)pyramid->images_pyramid[to_level]->line[ny])[nx];
+
         nannrow[x] = XY_TO_INT(x, y);
       }
       else {
@@ -328,9 +353,13 @@ void copy_unmasked_nnf_regions(Params *p, BITMAP *image, RegionMasks *amask, BIT
 
   for (int y = ystart ; y < yend ; y++) {
     int *annr = (int *) ann->line[y];
+    int *maskr = (int *) amask->bmp->line[y];
     for (int x = xstart ; x < xend ; x++) {
-      if (!is_point_in_box(y, x, mask_box, p->patch_w))
-        annr[x] = XY_TO_INT(x, y);
+      // if (!is_point_in_box(y, x, mask_box, p->patch_w))
+      //   annr[x] = XY_TO_INT(x, y);
+      if (maskr[x]) {
+
+      }
     }
   }
 }
@@ -406,19 +435,19 @@ BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance)
       if (row[x] && xmax-1-x < min_edge_distance && xmax-min_edge_distance >= 0) {
         nx = xmax - min_edge_distance;
       }
-      else if (row[x] && x-min_edge_distance/2 >= 0) {
+      else if (row[x] && CENTER_MASK_PIXEL(p, x) >= 0) {
         // We wish the masked pixel to be in the middle of the box. Without this
         // line and it's correspondent in y, the box would stretch to the
         // lower-right edge of the masked pixel
-        nx = x-min_edge_distance/2;
+        nx = CENTER_MASK_PIXEL(p, x);
       }
 
 
       if (row[x] && ymax-1-y < min_edge_distance && ymax-min_edge_distance >= 0) {
         ny = ymax - min_edge_distance;
       }
-      else if (row[x] && y-min_edge_distance/2 >= 0) {
-        ny = y-min_edge_distance/2;
+      else if (row[x] && CENTER_MASK_PIXEL(p, y) >= 0) {
+        ny = CENTER_MASK_PIXEL(p, y);
       }
 
       if (row[x]) {
@@ -426,6 +455,7 @@ BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance)
       }
 
       ((int *)ans->line[ny])[nx] = ((int *)mask->line[y])[x];
+      ((int *)ans->line[y])[x] = 0;
     }
   }
 

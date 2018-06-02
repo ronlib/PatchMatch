@@ -401,7 +401,7 @@ int lua_inpaint(lua_State *L)
   p->patch_w = 16;
   p->nn_dist = 1;
   // p->center_box = 1;
-  p->nn_iters = 3;
+  p->nn_iters = 1;
   p->inpaint_border = 2;
   p->max_inpaint_levels = 1;
 	init_params(p);

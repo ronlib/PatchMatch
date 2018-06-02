@@ -753,7 +753,7 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 
         ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
         ((int *) annd->line[y])[x] = err;
-        printf("Chose (%d,%d) as NN for (%d,%d), distance=%#08x\n", xbest, ybest, x, y, err);
+        printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x\n", xbest, ybest, x, y, err);
       }
     }
   }
