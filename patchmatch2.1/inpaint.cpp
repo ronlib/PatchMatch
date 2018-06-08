@@ -62,12 +62,14 @@ enum TransformOperation
 
   Returns a new mask.
 */
-BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance,
-                       int transform_operation);
+BITMAP *transform_mask(Params *p, BITMAP *mask, int min_edge_distance,
+                       int mask_center_offset, int border_size, int transform_operation);
 void draw_box_around_mask_point(BITMAP *mask, int x, int y, int border);
 
-#define CENTER_MASK_PIXEL(p, position) position-p->patch_w/2
-#define UNCENTER_MASK_PIXEL(p, position) position+p->patch_w/2
+// #define CENTER_MASK_PIXEL(p, position) position-p->patch_w/2
+#define CENTER_MASK_PIXEL(offset, position) position-offset
+// #define UNCENTER_MASK_PIXEL(p, position) position+p->patch_w/2
+#define UNCENTER_MASK_PIXEL(offset, position) position+offset
 
 
 typedef struct MaskTransformationParameters
@@ -92,6 +94,7 @@ public:
 
 	BITMAP **images_pyramid;
 	BITMAP **masks_pyramid;
+  BITMAP **bmasks_pyramid;
   BITMAP **transformed_masks_pyramid;
   // TODO: decide if needed
   BITMAP **inv_masks_pyramid;
@@ -119,10 +122,11 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
     BITMAP *timage = pyramid.images_pyramid[level];
     BITMAP *tmask = pyramid.transformed_masks_pyramid[level];
     BITMAP *tinv_mask = pyramid.transformed_inv_masks_pyramid[level];
+    BITMAP *tbmask = pyramid.bmasks_pyramid[level];
     RegionMasks *tamask = new RegionMasks(p, tinv_mask, /*full=*/0);
 
     if (level == pyramid.max_pyramid_level-1) {
-      ann = init_nn(p, timage, timage, /*bmask=*/tmask, /*region_masks=*/NULL,
+      ann = init_nn(p, timage, timage, /*bmask=*/tbmask, /*region_masks=*/NULL,
                     /*amask=*/ tamask, /*trim_patch=*/ 1, NULL, NULL);
       // copy_unmasked_nnf_regions(p, timage, tamask, ann);
       inpainted_image = inpaint_image(p, &pyramid, timage, tamask, level, ann);
@@ -199,10 +203,13 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
 	pyramid->images_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
   pyramid->images_pyramid[0] = image;
 	pyramid->masks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
-  pyramid->masks_pyramid[0] = transform_mask(p, mask, p->patch_w, ADD_BORDERS);
+  pyramid->masks_pyramid[0] = transform_mask(p, mask, p->patch_w, p->patch_w/2, p->inpaint_border, ADD_BORDERS);
+  pyramid->bmasks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
+  pyramid->bmasks_pyramid[0] = transform_mask(p, mask, 0, p->patch_w/2,
+                                              p->patch_w/2, ADD_BORDERS | CENTER_MASK);
   pyramid->transformed_masks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
   pyramid->transformed_masks_pyramid[0] =
-    transform_mask(p, mask, p->patch_w, ADD_BORDERS | TRANSLATE_FROM_EDGES | CENTER_MASK);
+    transform_mask(p, mask, p->patch_w, p->patch_w/2, p->inpaint_border, ADD_BORDERS | TRANSLATE_FROM_EDGES | CENTER_MASK);
   pyramid->inv_masks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
   pyramid->inv_masks_pyramid[0] = inverse_mask_bitmap(mask);
   pyramid->transformed_inv_masks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
@@ -221,16 +228,21 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
     BITMAP *prev_mask = scaled_mask;
     scaled_mask = downscale_image(scaled_mask);
     destroy_bitmap(prev_mask);
-    snprintf(filename, 128, "scaled_mask_%d.png", i);
-    save_bitmap(threshold_image(scaled_mask, 128), filename);
     BITMAP *scaled_mask_copy = new BITMAP(*scaled_mask);
     // pyramid->masks_pyramid[i] = threshold_image(downscale_image(pyramid->masks_pyramid[i-1]), 128);
-    pyramid->masks_pyramid[i] = transform_mask(p, threshold_image(scaled_mask_copy, 128),
-                                               p->patch_w, ADD_BORDERS);
+    threshold_image(scaled_mask_copy, p->mask_threshold);
+    pyramid->masks_pyramid[i] = transform_mask(p, scaled_mask_copy,
+                                               p->patch_w, p->patch_w/2, p->inpaint_border, ADD_BORDERS);
+    pyramid->bmasks_pyramid[i] = transform_mask(p, scaled_mask_copy, 0, p->patch_w/2,
+                                                p->patch_w/2, ADD_BORDERS | CENTER_MASK);
     destroy_bitmap(scaled_mask_copy);
+
+    snprintf(filename, 128, "bmask_%d.png", i);
+    save_bitmap(pyramid->bmasks_pyramid[i], filename);
+
     pyramid->inv_masks_pyramid[i] = inverse_mask_bitmap(pyramid->masks_pyramid[i]);
     pyramid->transformed_masks_pyramid[i] =
-      transform_mask(p, scaled_mask, p->patch_w,
+      transform_mask(p, scaled_mask, p->patch_w, p->patch_w/2, p->inpaint_border,
                      ADD_BORDERS | TRANSLATE_FROM_EDGES | CENTER_MASK);
     pyramid->transformed_inv_masks_pyramid[i] =
       inverse_mask_bitmap(pyramid->transformed_masks_pyramid[i]);
@@ -341,11 +353,12 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   BITMAP *orig_image = pyramid->images_pyramid[level];
   BITMAP *mask = pyramid->masks_pyramid[level];
+  BITMAP *bmask = pyramid->bmasks_pyramid[level];
   BITMAP *inpainted_image;
 
 
   if (!ann) {
-    ann = init_nn(p, image, image, /*bmask=*/mask, /*region_masks=*/NULL,
+    ann = init_nn(p, image, image, /*bmask=*/bmask, /*region_masks=*/NULL,
                   /*amask=*/ amask, /*trim_patch=*/ 1, NULL, NULL);
   }
 
@@ -353,14 +366,15 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   // TODO: consider using inv_mask for bmask, because currently the function
   //       would fill in every non-identical mask pixel between a and b with INT_MAX
-  BITMAP *annd = init_dist(p, image, image, ann, /*bmask=*/mask, NULL, amask);
-  nn(p, image, image, ann, annd, amask, /*bmask=*/mask, 0, 0, rp, 0, 0, 0,
+  BITMAP *annd = init_dist(p, image, image, ann, /*bmask=*/bmask, NULL, amask);
+  nn(p, image, image, ann, annd, amask, /*bmask=*/bmask, 0, 0, rp, 0, 0, 0,
      /*region_masks=*/NULL, p->cores, NULL, NULL);
-  minnn(p, image, image, ann, annd, /*ann_prev=*/ ann, mask, /*level=*/0, 0, rp,
+  minnn(p, image, image, ann, annd, /*ann_prev=*/ ann, bmask, /*level=*/0, 0, rp,
         NULL, amask, p->cores);
   delete rp;
 
-  inpainted_image = vote(p, image, ann, NULL, mask, NULL, 1, 0, amask, NULL, image, NULL, 0);
+  inpainted_image = vote(p, image, ann, /*bnn=*/NULL, bmask, /*bweight=*/NULL,
+                         1, 0, amask, NULL, image, NULL, 0);
   copy_unmasked_regions(p, image, pyramid->masks_pyramid[level], orig_image);
   // save_bitmap(annd, "annd.bmp");
   return inpainted_image;
@@ -454,8 +468,8 @@ BITMAP *threshold_image(BITMAP *image, unsigned char threshold)
 }
 
 
-BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance,
-                       int transform_operation)
+BITMAP *transform_mask(Params *p, BITMAP *mask, int min_edge_distance,
+                       int mask_center_offset, int border_size, int transform_operation)
 {
   int ymax = mask->h, xmax = mask->w;
   BITMAP *ans = create_bitmap(mask->w, mask->h);
@@ -483,12 +497,12 @@ BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance,
       }
 
       if ((transform_operation & CENTER_MASK) && row[x]) {
-        if (CENTER_MASK_PIXEL(p, x) >= 0) {
-          nx = CENTER_MASK_PIXEL(p, x);
+        if (CENTER_MASK_PIXEL(mask_center_offset, x) >= 0) {
+          nx = CENTER_MASK_PIXEL(mask_center_offset, x);
         }
 
-        if (CENTER_MASK_PIXEL(p, y) >= 0) {
-          ny = CENTER_MASK_PIXEL(p, y);
+        if (CENTER_MASK_PIXEL(mask_center_offset, y) >= 0) {
+          ny = CENTER_MASK_PIXEL(mask_center_offset, y);
         }
 
         if (nx != x || ny != y) {
@@ -539,11 +553,11 @@ BITMAP *transform_mask(Params *p, BITMAP *mask, unsigned int min_edge_distance,
       ////////////////////////////////////////////////////////////////////////////////////
   }
 
-  int border_size = (transform_operation & ADD_BORDERS) ? p->inpaint_border : 0;
+  int tborder_size = (transform_operation & ADD_BORDERS) ? border_size : 0;
 
   for (std::vector<int>::iterator iter = mask_points.begin() ;
        iter != mask_points.end() ; ++iter) {
-    draw_box_around_mask_point(ans, INT_TO_X(*iter), INT_TO_Y(*iter), border_size);
+    draw_box_around_mask_point(ans, INT_TO_X(*iter), INT_TO_Y(*iter), tborder_size);
   }
 
 

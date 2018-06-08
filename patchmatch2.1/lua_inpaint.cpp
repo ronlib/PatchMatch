@@ -402,9 +402,12 @@ int lua_inpaint(lua_State *L)
   p->nn_dist = 1;
   // p->center_box = 1;
   p->nn_iters = 1;
-  p->inpaint_border = 2;
+  p->inpaint_border = 1;
   p->max_inpaint_levels = 1;
 	init_params(p);
+  p->mask_threshold = 100;
+  // TODO: remove the following line
+  // p->cores = 1;
 	inpaint(p, image, mask);
 
 	return 1;

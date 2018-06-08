@@ -132,6 +132,7 @@ class Params { public:
 	int nn_dist;           /* Should use NN comparison (only if PATCH_W==16). */
   int inpaint_border;        /* The border from a masked pixel from which the
                                 inpainting is done. */
+  int mask_threshold;
   int max_inpaint_levels;    /* The max number of pyramid levels to inpaint. 0
                                 means no limit */
 
@@ -174,6 +175,7 @@ class Params { public:
 		do_enrich(1),
 		nn_dist(0),
     inpaint_border(0),
+     mask_threshold(128),
     max_inpaint_levels(0)
      { }
 };
