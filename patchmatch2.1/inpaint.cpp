@@ -24,7 +24,7 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask);
 */
 BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                       RegionMasks *amask, int level, BITMAP *ann=NULL);
-void copy_unmasked_regions(Params *p, BITMAP *image, RegionMasks *amask, BITMAP *orig_image);
+void copy_unmasked_regions(Params *p, BITMAP *image, BITMAP *mask, BITMAP *orig_image);
 int is_point_in_box(int y, int x, Box box, int border);
 BITMAP *inverse_mask_bitmap(BITMAP *mask);
 BITMAP *threshold_image(BITMAP *image, unsigned char threshold);
@@ -221,6 +221,8 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
     BITMAP *prev_mask = scaled_mask;
     scaled_mask = downscale_image(scaled_mask);
     destroy_bitmap(prev_mask);
+    snprintf(filename, 128, "scaled_mask_%d.png", i);
+    save_bitmap(threshold_image(scaled_mask, 128), filename);
     BITMAP *scaled_mask_copy = new BITMAP(*scaled_mask);
     // pyramid->masks_pyramid[i] = threshold_image(downscale_image(pyramid->masks_pyramid[i-1]), 128);
     pyramid->masks_pyramid[i] = transform_mask(p, threshold_image(scaled_mask_copy, 128),
@@ -339,6 +341,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   BITMAP *orig_image = pyramid->images_pyramid[level];
   BITMAP *mask = pyramid->masks_pyramid[level];
+  BITMAP *inpainted_image;
 
 
   if (!ann) {
@@ -357,22 +360,22 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
         NULL, amask, p->cores);
   delete rp;
 
-  BITMAP *inpainted_image = vote(p, image, ann, NULL, mask, NULL, 1, 0, amask, NULL, image, NULL, 0);
-  copy_unmasked_regions(p, image, amask, orig_image);
+  inpainted_image = vote(p, image, ann, NULL, mask, NULL, 1, 0, amask, NULL, image, NULL, 0);
+  copy_unmasked_regions(p, image, pyramid->masks_pyramid[level], orig_image);
   // save_bitmap(annd, "annd.bmp");
   return inpainted_image;
 }
 
 
-void copy_unmasked_regions(Params *p, BITMAP *image, RegionMasks *amask, BITMAP *orig_image)
+void copy_unmasked_regions(Params *p, BITMAP *image, BITMAP *mask, BITMAP *orig_image)
 {
-  if (!amask) {
+  if (!mask) {
     fprintf(stderr, "amask must be non NULL");
     exit(1);
   }
 
-  Box boundries_box = amask->box[255];
-  Box mask_box = amask->box[0]; // 0 denotes the unmasked regions, but because
+  // Box boundries_box = amask->box[255];
+  // Box mask_box = amask->box[0]; // 0 denotes the unmasked regions, but because
                                 // we want the algorithm in nn function to go
                                 // over our unmasked region, we inverted the
                                 // mask image
@@ -383,7 +386,7 @@ void copy_unmasked_regions(Params *p, BITMAP *image, RegionMasks *amask, BITMAP 
   for (int y = ystart ; y < yend ; y++) {
     int *row = (int *) image->line[y];
     int *origr = (int *) orig_image->line[y];
-    int *maskr = (int *) amask->bmp->line[y];
+    int *maskr = (int *) mask->line[y];
     for (int x = xstart ; x < xend ; x++) {
       // if (!is_point_in_box(y, x, mask_box, p->patch_w))
       //   annr[x] = XY_TO_INT(x, y);
