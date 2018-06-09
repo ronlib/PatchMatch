@@ -69,6 +69,15 @@ int lua_inpaint(lua_State *L);
 */
 TorchImageStorage convert_to_torch_image(BITMAP *image);
 BITMAP *convert_to_bitmap(unsigned char* im_buf, int w, int h);
+/*
+  The function receives 2 arguments, of two png file paths.
+  A nearest neighbour searched is performed between the two images, using 2
+  algorithms: PatchMatch using Patch2Vec (neural network patch comparison), and
+  PatchMatch using L2 comparison.
+
+  The function returns the average L2 distance between the NN results.
+*/
+static int compare_patchmatch(lua_State *L);
 
 static lua_State * g_L = 0;
 
@@ -82,6 +91,7 @@ __declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
 		{"nn", nn},
 		{"vote", vote},
 		{"inpaint", lua_inpaint},
+    {"compare_nn_l2", compare_patchmatch},
 		{NULL, NULL}
 	};
 
@@ -403,12 +413,13 @@ int lua_inpaint(lua_State *L)
   // p->center_box = 1;
   p->nn_iters = 1;
   p->inpaint_border = 1;
-  p->max_inpaint_levels = 1;
+  p->max_inpaint_levels = 3;
 	init_params(p);
   p->mask_threshold = 100;
   // TODO: remove the following line
   // p->cores = 1;
 	inpaint(p, image, mask);
+  delete p;
 
 	return 1;
 }
@@ -572,4 +583,69 @@ int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p
   printf("%f sec\n", cpu_time_used);
 
 	return lua_return_val;
+}
+
+static int compare_patchmatch(lua_State *L)
+{
+	int nin = lua_gettop(L);
+	int i = 1;
+
+  if (nin < 2) {
+    luaL_error(g_L, "compare_patchmatch requires 2 arguments");
+  }
+
+
+  const char * A_file_path = luaL_checkstring(L, i);	i++;
+	const char * B_file_path = luaL_checkstring(L, i);	i++;
+
+  BITMAP *a = load_bitmap(A_file_path);
+  BITMAP *b = load_bitmap(B_file_path);
+
+  Params *p_nn = new Params();
+  Params *p_l2 = new Params();
+  p_l2->patch_w = p_nn->patch_w = 16;
+  p_nn->nn_dist = 1;
+  p_l2->nn_iters = p_nn->nn_iters = 1;
+
+  RecomposeParams *rp = new RecomposeParams();
+
+  BITMAP *ann_nn = init_nn(p_nn, a, b, NULL, NULL, NULL, 1, NULL, NULL);
+  BITMAP *annd_nn = init_dist(p_nn, a, b, ann_nn, NULL, NULL, NULL);
+  nn(p_nn, a, b, ann_nn, annd_nn, NULL, NULL, 0, 0, rp, 0, 0, 0,NULL, p_nn->cores, NULL, NULL);
+  minnn(p_nn, a, b, ann_nn, annd_nn, ann_nn, NULL, 0, 0, rp, NULL, NULL, p_nn->cores);
+
+  save_bitmap(ann_nn, "ann_nn.bmp");
+
+
+  BITMAP *ann_l2 = init_nn(p_l2, a, b, NULL, NULL, NULL, 1, NULL, NULL);
+  BITMAP *annd_l2 = init_dist(p_l2, a, b, ann_l2, NULL, NULL, NULL);
+  nn(p_l2, a, b, ann_l2, annd_l2, NULL, NULL, 0, 0, rp, 0, 0, 0,NULL, p_l2->cores, NULL, NULL);
+  minnn(p_l2, a, b, ann_l2, annd_l2, ann_l2, NULL, 0, 0, rp, NULL, NULL, p_l2->cores);
+
+  save_bitmap(ann_l2, "ann_l2.bmp");
+
+  // Create agreement map
+  int xend = ann_nn->w - p_nn->patch_w;
+  int yend = ann_nn->h - p_nn->patch_w;
+  BITMAP *agreement_map = create_bitmap(ann_nn->w, ann_nn->h);
+  clear(agreement_map);
+
+  for (int y = 0 ; y < yend ; y++) {
+    int *ann_nnr = (int *)ann_nn->line[y];
+    int *ann_l2r = (int *)ann_l2->line[y];
+    int *agmr = (int *)agreement_map->line[y];
+    for (int x = 0 ; x < xend ; x++) {
+      if (ann_nnr[x] == ann_l2r[x]) {
+        agmr[x] = 0xffffffff;
+      }
+      else {
+        agmr[x] = 0;
+      }
+    }
+  }
+
+  save_bitmap(agreement_map, "agreement_map.bmp");
+
+	lua_pop(g_L, 2);
+  return 0;
 }
