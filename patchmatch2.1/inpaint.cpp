@@ -254,8 +254,8 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
     // }
     snprintf(filename, 128, "transformed_mask_level_%d.png", i);
     save_bitmap(pyramid->transformed_masks_pyramid[i], filename);
-    snprintf(filename, 128, "mask_level_%d.png", i);
-    save_bitmap(pyramid->masks_pyramid[i], filename);
+    snprintf(filename, 128, "inv_mask_level_%d.png", i);
+    save_bitmap(pyramid->inv_masks_pyramid[i], filename);
 	}
   destroy_bitmap(scaled_mask);
 }
@@ -375,7 +375,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   inpainted_image = vote(p, image, ann, /*bnn=*/NULL, bmask, /*bweight=*/NULL,
                          1, 0, amask, NULL, image, NULL, 0);
-  copy_unmasked_regions(p, image, pyramid->masks_pyramid[level], orig_image);
+  copy_unmasked_regions(p, inpainted_image, pyramid->inv_masks_pyramid[level], orig_image);
   // save_bitmap(annd, "annd.bmp");
   return inpainted_image;
 }
