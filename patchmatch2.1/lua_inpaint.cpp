@@ -17,36 +17,14 @@ extern "C" {
 #include "knn.h"
 #include "inpaint.h"
 #include "lua_inpaint.h"
+#include "export_def.h"
+
 
 #define MODE_IMAGE  0
 #define MODE_VECB   1
 #define MODE_VECF   2
 
 
-#if defined _WIN32 || defined __CYGWIN__
-  #ifdef BUILDING_DLL
-    #ifdef __GNUC__
-      #define DLL_PUBLIC __attribute__ ((dllexport))
-    #else
-      #define DLL_PUBLIC __declspec(dllexport) // Note: actually gcc seems to also supports this syntax.
-    #endif
-  #else
-    #ifdef __GNUC__
-      #define DLL_PUBLIC __attribute__ ((dllimport))
-    #else
-      #define DLL_PUBLIC __declspec(dllimport) // Note: actually gcc seems to also supports this syntax.
-    #endif
-  #endif
-  #define DLL_LOCAL
-#else
-  #if __GNUC__ >= 4
-    #define DLL_PUBLIC __attribute__ ((visibility ("default")))
-    #define DLL_LOCAL  __attribute__ ((visibility ("hidden")))
-  #else
-    #define DLL_PUBLIC
-    #define DLL_LOCAL
-  #endif
-#endif
 
 typedef struct TorchImageStorage
 {
@@ -61,6 +39,18 @@ static int vote(lua_State *L);
 static int release_bitmap(lua_State *L);
 int push_ann_to_stack(lua_State *L, BITMAP *ann);
 void error (lua_State *L, const char *fmt, ...);
+
+/*
+  @param Image with a hole.
+  @param Image's mask (white indicates a masked part).
+  @param Number of patchmatch nearest neighbours search iterations to do
+  @param Size of inpaint border around the masked parts. This parameter decides
+         what is the width of the boundary made outwards from any masked pixel.
+  @param The maximum number of pyramid levels (starting from the smallest image
+         size) to inpaint.
+  @param Threshold for determining which pixel is masked when downsizing the
+         mask image.
+*/
 int lua_inpaint(lua_State *L);
 
 /*
@@ -81,11 +71,7 @@ static int compare_patchmatch(lua_State *L);
 
 static lua_State * g_L = 0;
 
-#ifdef _MSC_VER
-__declspec(dllexport) LUALIB_API int luaopen_luainpaint (lua_State *L)
-#else
-	extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
-#endif
+extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
 {
 	static const luaL_Reg reg_inpaint_f[] = {
 		{"nn", nn},
@@ -265,6 +251,7 @@ static int nn(lua_State *L)
 		// Looks like a heat map
 		const char* ans_file_path = "/tmp/ans.bmp";
 		save_bitmap(ans, ans_file_path);
+    lua_pop(L, nin);
 		// TODO: free memory
 		push_ann_to_stack(L, ann);
 		// destroy_bitmap(ans);
@@ -365,6 +352,7 @@ static int vote(lua_State *L)
 	destroy_region_masks(amaskm);
 	const char* ans_file_path = "/tmp/vote.bmp";
 	save_bitmap(a, ans_file_path);
+  lua_pop(L, nin);
 	lua_pushstring(L, ans_file_path);
 
 	delete p;
@@ -401,27 +389,42 @@ int lua_inpaint(lua_State *L)
 			error(L, "Not enough arguments");
 		}
 
+  Params *p = new Params();
+
 	const char * image_file_path = luaL_checkstring(L, i);	i++;
 	const char * mask_file_path = luaL_checkstring(L, i);	i++;
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->nn_iters = luaL_checknumber(L, i);
+  } i++;
+
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->inpaint_border = luaL_checknumber(L, i);
+  } i++;
+
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->max_inpaint_levels = luaL_checknumber(L, i);
+  } i++;
+
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->mask_threshold = luaL_checknumber(L, i);
+  } i++;
 
 	BITMAP *image = load_bitmap(image_file_path);
 	BITMAP *mask = load_bitmap(mask_file_path);
 
-	Params *p = new Params();
+  // Must be 16 to support our specific neural network
   p->patch_w = 16;
+  // Indicating to using a neural network
   p->nn_dist = 1;
-  // p->center_box = 1;
-  p->nn_iters = 1;
-  p->inpaint_border = 1;
-  p->max_inpaint_levels = 3;
 	init_params(p);
-  p->mask_threshold = 100;
-  // TODO: remove the following line
-  // p->cores = 1;
-	inpaint(p, image, mask);
-  delete p;
 
-	return 1;
+	inpaint(p, image, mask);
+
+  destroy_bitmap(image);
+  destroy_bitmap(mask);
+  delete p;
+  lua_pop(L, nin);
+	return 0;
 }
 
 
@@ -605,7 +608,7 @@ static int compare_patchmatch(lua_State *L)
   Params *p_l2 = new Params();
   p_l2->patch_w = p_nn->patch_w = 16;
   p_nn->nn_dist = 1;
-  p_l2->nn_iters = p_nn->nn_iters = 1;
+  p_l2->nn_iters = p_nn->nn_iters = 5;
 
   RecomposeParams *rp = new RecomposeParams();
 

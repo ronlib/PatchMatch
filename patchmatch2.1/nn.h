@@ -174,7 +174,7 @@ class Params { public:
      do_inverse_enrich(1),
 		do_enrich(1),
 		nn_dist(0),
-    inpaint_border(0),
+    inpaint_border(4),
      mask_threshold(128),
     max_inpaint_levels(0)
      { }
