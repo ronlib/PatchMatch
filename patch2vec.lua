@@ -1,15 +1,23 @@
-require 'nn'
-require 'dpnn'
+require 'check_for_cuda'
+
+if (loadrequire('cunn') == 0) then
+   require 'nn'
+   require 'dpnn'
+else
+   require 'cunn'
+   require 'cudpnn'
+end
+
 require 'image'
 
 
 function patch2vec_init(nn_file_path)
-	 NN = torch.load(nn_file_path)
+	 NN = torch.load(nn_file_path):cuda()
 end
 
 function create_tensor_from_image_storage(storage, H, W, num_channels)
 	 -- local t = torch.ByteTensor(storage):float()/255
-	 local t = torch.ByteTensor(storage):float()/255
+	 local t = torch.ByteTensor(storage):cuda():float()/255
 	 t = t:view(num_channels, H, W)
 	 t = t:transpose(2,3):transpose(1,2)
 	 t = t:contiguous()
