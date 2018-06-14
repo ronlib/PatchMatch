@@ -1,23 +1,36 @@
 require 'check_for_cuda'
+require 'dpnn'
 
 if (loadrequire('cunn') == 0) then
    require 'nn'
-   require 'dpnn'
+   cuda = 0
 else
    require 'cunn'
-   require 'cudpnn'
+   require 'cudnn'
+   cuda = 1
 end
 
 require 'image'
 
 
 function patch2vec_init(nn_file_path)
-	 NN = torch.load(nn_file_path):cuda()
+   if (cuda == 1) then
+      NN = torch.load(nn_file_path):cuda()
+      print 'Using CUDA'
+   else
+      NN = torch.load(nn_file_path)
+      print 'Not using CUDA'
+   end
 end
 
 function create_tensor_from_image_storage(storage, H, W, num_channels)
 	 -- local t = torch.ByteTensor(storage):float()/255
-	 local t = torch.ByteTensor(storage):cuda():float()/255
+   local t
+   if (cuda == 1) then
+      t = torch.ByteTensor(storage):cuda():float()/255
+   else
+      t = torch.ByteTensor(storage):float()/255
+   end
 	 t = t:view(num_channels, H, W)
 	 t = t:transpose(2,3):transpose(1,2)
 	 t = t:contiguous()

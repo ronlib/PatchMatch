@@ -47,7 +47,7 @@ void error (lua_State *L, const char *fmt, ...);
   @param Size of inpaint border around the masked parts. This parameter decides
          what is the width of the boundary made outwards from any masked pixel.
   @param The maximum number of pyramid levels (starting from the smallest image
-         size) to inpaint.
+         size) to inpaint. 0 means the maximum number possible.
   @param Threshold for determining which pixel is masked when downsizing the
          mask image.
 */
