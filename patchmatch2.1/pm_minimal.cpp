@@ -28,6 +28,8 @@ extern "C" {
 #define MIN(a, b) ((a)<(b)?(a):(b))
 #endif
 
+#define PATH_LENGTH 512
+
 /* -------------------------------------------------------------------------
    BITMAP: Minimal image class
    ------------------------------------------------------------------------- */
@@ -73,13 +75,13 @@ BITMAP *load_bitmap(const char *filename) {
 
 PMBITMAP *pm_load_bitmap(const char *filename) {
   check_im();
-  char rawname[256], txtname[256];
+  char rawname[PATH_LENGTH], txtname[PATH_LENGTH];
   strcpy(rawname, filename);
   strcpy(txtname, filename);
   if (!strstr(rawname, ".")) { fprintf(stderr, "Error reading image '%s': no extension found\n", filename); exit(1); }
   sprintf(strstr(rawname, "."), ".raw");
   sprintf(strstr(txtname, "."), ".txt");
-  char buf[256];
+  char buf[PATH_LENGTH];
   sprintf(buf, "convert %s rgba:%s", filename, rawname);
   if (system(buf) != 0) { fprintf(stderr, "Error reading image '%s': ImageMagick convert gave an error\n", filename); exit(1); }
   sprintf(buf, "identify -format \"%%w %%h\" %s > %s", filename, txtname);
@@ -110,6 +112,7 @@ PMBITMAP *pm_load_bitmap(const char *filename) {
 	}
   fclose(f);
   remove(rawname);
+  remove(txtname);
   return ans;
 }
 
@@ -123,11 +126,11 @@ void save_bitmap(BITMAP *bmp, const char *filename) {
 
 void pm_save_bitmap(PMBITMAP *bmp, const char *filename) {
   check_im();
-  char rawname[256];
+  char rawname[PATH_LENGTH];
   strcpy(rawname, filename);
   if (!strstr(rawname, ".")) { fprintf(stderr, "Error writing image '%s': no extension found\n", filename); exit(1); }
   sprintf(strstr(rawname, "."), ".raw");
-  char buf[256];
+  char buf[PATH_LENGTH];
   FILE *f = fopen(rawname, "wb");
   if (!f) { fprintf(stderr, "Error writing image '%s': could not open raw temporary file\n", filename); exit(1); }
   unsigned char *p = (unsigned char *) bmp->data;
