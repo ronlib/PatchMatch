@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <libgen.h>
 
 #include "TH/TH.h"
 #include <TH/THStorage.h>
@@ -23,6 +24,7 @@ extern "C" {
 #define MODE_IMAGE  0
 #define MODE_VECB   1
 #define MODE_VECF   2
+#define FILE_PATH_LENGTH 512
 
 
 
@@ -598,8 +600,20 @@ static int compare_patchmatch(lua_State *L)
   }
 
 
+
   const char * A_file_path = luaL_checkstring(L, i);	i++;
 	const char * B_file_path = luaL_checkstring(L, i);	i++;
+
+  char filepath[FILE_PATH_LENGTH];
+  char *full_path1 = realpath(A_file_path, NULL);
+  char *full_path2 = realpath(B_file_path, NULL);
+  char *basename1, *basename2, dirnamebuf[FILE_PATH_LENGTH], *dir;
+  char result_file_path[FILE_PATH_LENGTH];
+  memcpy(dirnamebuf, full_path1, sizeof(dirnamebuf));
+  dir = dirname(dirnamebuf);
+  basename1 = basename(full_path1);
+  basename2 = basename(full_path2);
+
 
   BITMAP *a = load_bitmap(A_file_path);
   BITMAP *b = load_bitmap(B_file_path);
@@ -617,7 +631,8 @@ static int compare_patchmatch(lua_State *L)
   nn(p_nn, a, b, ann_nn, annd_nn, NULL, NULL, 0, 0, rp, 0, 0, 0,NULL, p_nn->cores, NULL, NULL);
   minnn(p_nn, a, b, ann_nn, annd_nn, ann_nn, NULL, 0, 0, rp, NULL, NULL, p_nn->cores);
 
-  save_bitmap(ann_nn, "ann_nn.bmp");
+  snprintf(result_file_path, sizeof(result_file_path), "%s/%s_%s_nn.bmp", dir, basename1, basename2);
+  save_bitmap(ann_nn, result_file_path);
 
 
   BITMAP *ann_l2 = init_nn(p_l2, a, b, NULL, NULL, NULL, 1, NULL, NULL);
@@ -625,30 +640,12 @@ static int compare_patchmatch(lua_State *L)
   nn(p_l2, a, b, ann_l2, annd_l2, NULL, NULL, 0, 0, rp, 0, 0, 0,NULL, p_l2->cores, NULL, NULL);
   minnn(p_l2, a, b, ann_l2, annd_l2, ann_l2, NULL, 0, 0, rp, NULL, NULL, p_l2->cores);
 
-  save_bitmap(ann_l2, "ann_l2.bmp");
-
-  // Create agreement map
-  int xend = ann_nn->w - p_nn->patch_w;
-  int yend = ann_nn->h - p_nn->patch_w;
-  BITMAP *agreement_map = create_bitmap(ann_nn->w, ann_nn->h);
-  clear(agreement_map);
-
-  for (int y = 0 ; y < yend ; y++) {
-    int *ann_nnr = (int *)ann_nn->line[y];
-    int *ann_l2r = (int *)ann_l2->line[y];
-    int *agmr = (int *)agreement_map->line[y];
-    for (int x = 0 ; x < xend ; x++) {
-      if (ann_nnr[x] == ann_l2r[x]) {
-        agmr[x] = 0xffffffff;
-      }
-      else {
-        agmr[x] = 0;
-      }
-    }
-  }
-
-  save_bitmap(agreement_map, "agreement_map.bmp");
+  snprintf(result_file_path, sizeof(result_file_path), "%s/%s_%s_l2.bmp", dir, basename1, basename2);
+  save_bitmap(ann_l2, result_file_path);
 
 	lua_pop(g_L, 2);
+  free(full_path2);
+  free(full_path1);
+
   return 0;
 }
