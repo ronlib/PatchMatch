@@ -25,6 +25,7 @@ end
 
 function create_tensor_from_image_storage(storage, H, W, num_channels)
 	 -- local t = torch.ByteTensor(storage):float()/255
+   torch.setnumthreads(1)
    local t
    if (cuda == 1) then
       t = torch.ByteTensor(storage):float():cuda()/255
