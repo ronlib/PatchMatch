@@ -624,6 +624,9 @@ static int compare_patchmatch(lua_State *L)
   p_nn->nn_dist = 1;
   p_nn->algo = ALGO_CPUTILED;
   p_l2->nn_iters = p_nn->nn_iters = 5;
+  p_nn->cores = omp_get_num_procs();
+
+  init_params(p_nn);
 
   RecomposeParams *rp = new RecomposeParams();
 
@@ -635,7 +638,7 @@ static int compare_patchmatch(lua_State *L)
   snprintf(result_file_path, sizeof(result_file_path), "%s/%s_%s_nn.bmp", dir, basename1, basename2);
   save_bitmap(ann_nn, result_file_path);
 
-
+  init_params(p_l2);
   BITMAP *ann_l2 = init_nn(p_l2, a, b, NULL, NULL, NULL, 1, NULL, NULL);
   BITMAP *annd_l2 = init_dist(p_l2, a, b, ann_l2, NULL, NULL, NULL);
   nn(p_l2, a, b, ann_l2, annd_l2, NULL, NULL, 0, 0, rp, 0, 0, 0,NULL, p_l2->cores, NULL, NULL);
