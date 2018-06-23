@@ -996,24 +996,29 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
 								{
                   int err0 = ((int *) annd->line[y])[x+dx];
 
-                  int xa = dx, xb = 0;
-                  if (dx > 0) { xa = 0; xb = dx; }
-                  int partial = 0;
-                  for (int yi = 0; yi < PATCH_W; yi++) {
-                    int c1 = ((int *) a->line[y+yi])[x+xa];
-                    int c2 = ((int *) b->line[ypp+yi])[xpp+xa];
-                    int c3 = ((int *) a->line[y+yi])[x+xb+PATCH_W-1];
-                    int c4 = ((int *) b->line[ypp+yi])[xpp+xb+PATCH_W-1];
-                    int dr12 = (c1&255)-(c2&255);
-                    int dg12 = ((c1>>8)&255)-((c2>>8)&255);
-                    int db12 = (c1>>16)-(c2>>16);
-                    int dr34 = (c3&255)-(c4&255);
-                    int dg34 = ((c3>>8)&255)-((c4>>8)&255);
-                    int db34 = (c3>>16)-(c4>>16);
-                    partial +=  dr34*dr34+dg34*dg34+db34*db34
-                               -dr12*dr12-dg12*dg12-db12*db12;
+                  if (p->nn_dist == 1 && PATCH_W == 16) {
+                    err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
                   }
-                  err0 += (dx < 0) ? partial: -partial;
+                  else {
+                    int xa = dx, xb = 0;
+                    if (dx > 0) { xa = 0; xb = dx; }
+                    int partial = 0;
+                    for (int yi = 0; yi < PATCH_W; yi++) {
+                      int c1 = ((int *) a->line[y+yi])[x+xa];
+                      int c2 = ((int *) b->line[ypp+yi])[xpp+xa];
+                      int c3 = ((int *) a->line[y+yi])[x+xb+PATCH_W-1];
+                      int c4 = ((int *) b->line[ypp+yi])[xpp+xb+PATCH_W-1];
+                      int dr12 = (c1&255)-(c2&255);
+                      int dg12 = ((c1>>8)&255)-((c2>>8)&255);
+                      int db12 = (c1>>16)-(c2>>16);
+                      int dr34 = (c3&255)-(c4&255);
+                      int dg34 = ((c3>>8)&255)-((c4>>8)&255);
+                      int db34 = (c3>>16)-(c4>>16);
+                      partial +=  dr34*dr34+dg34*dg34+db34*db34
+                        -dr12*dr12-dg12*dg12-db12*db12;
+                    }
+                    err0 += (dx < 0) ? partial: -partial;
+                  }
                   if (err0 < err) {
                     err = err0;
                     xbest = xpp;
@@ -1037,28 +1042,33 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
 								{
                   int err0 = ((int *) annd->line[y+dy])[x];
 
-                  int ya = dy, yb = 0;
-                  if (dy > 0) { ya = 0; yb = dy; }
-                  int partial = 0;
-                  int *c1row = &((int *) a->line[y+ya])[x];
-                  int *c2row = &((int *) b->line[ypp+ya])[xpp];
-                  int *c3row = &((int *) a->line[y+yb+PATCH_W-1])[x];
-                  int *c4row = &((int *) b->line[ypp+yb+PATCH_W-1])[xpp];
-                  for (int xi = 0; xi < PATCH_W; xi++) {
-                    int c1 = c1row[xi];
-                    int c2 = c2row[xi];
-                    int c3 = c3row[xi];
-                    int c4 = c4row[xi];
-                    int dr12 = (c1&255)-(c2&255);
-                    int dg12 = ((c1>>8)&255)-((c2>>8)&255);
-                    int db12 = (c1>>16)-(c2>>16);
-                    int dr34 = (c3&255)-(c4&255);
-                    int dg34 = ((c3>>8)&255)-((c4>>8)&255);
-                    int db34 = (c3>>16)-(c4>>16);
-                    partial +=  dr34*dr34+dg34*dg34+db34*db34
-                               -dr12*dr12-dg12*dg12-db12*db12;
+                  if (p->nn_dist == 1 && PATCH_W == 16) {
+                    err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
                   }
-                  err0 += (dy < 0) ? partial: -partial;
+                  else {
+                    int ya = dy, yb = 0;
+                    if (dy > 0) { ya = 0; yb = dy; }
+                    int partial = 0;
+                    int *c1row = &((int *) a->line[y+ya])[x];
+                    int *c2row = &((int *) b->line[ypp+ya])[xpp];
+                    int *c3row = &((int *) a->line[y+yb+PATCH_W-1])[x];
+                    int *c4row = &((int *) b->line[ypp+yb+PATCH_W-1])[xpp];
+                    for (int xi = 0; xi < PATCH_W; xi++) {
+                      int c1 = c1row[xi];
+                      int c2 = c2row[xi];
+                      int c3 = c3row[xi];
+                      int c4 = c4row[xi];
+                      int dr12 = (c1&255)-(c2&255);
+                      int dg12 = ((c1>>8)&255)-((c2>>8)&255);
+                      int db12 = (c1>>16)-(c2>>16);
+                      int dr34 = (c3&255)-(c4&255);
+                      int dg34 = ((c3>>8)&255)-((c4>>8)&255);
+                      int db34 = (c3>>16)-(c4>>16);
+                      partial +=  dr34*dr34+dg34*dg34+db34*db34
+                        -dr12*dr12-dg12*dg12-db12*db12;
+                    }
+                    err0 += (dy < 0) ? partial: -partial;
+                  }
                   if (err0 < err) {
                     err = err0;
                     xbest = xpp;

@@ -599,7 +599,7 @@ static int compare_patchmatch(lua_State *L)
     luaL_error(g_L, "compare_patchmatch requires 2 arguments");
   }
 
-
+  printf("Number of threads: %d\n", omp_get_num_procs());
 
   const char * A_file_path = luaL_checkstring(L, i);	i++;
 	const char * B_file_path = luaL_checkstring(L, i);	i++;
@@ -622,6 +622,7 @@ static int compare_patchmatch(lua_State *L)
   Params *p_l2 = new Params();
   p_l2->patch_w = p_nn->patch_w = 16;
   p_nn->nn_dist = 1;
+  p_nn->algo = ALGO_CPUTILED;
   p_l2->nn_iters = p_nn->nn_iters = 5;
 
   RecomposeParams *rp = new RecomposeParams();
