@@ -622,9 +622,7 @@ static int compare_patchmatch(lua_State *L)
   Params *p_l2 = new Params();
   p_l2->patch_w = p_nn->patch_w = 16;
   p_nn->nn_dist = 1;
-  p_nn->algo = ALGO_CPUTILED;
   p_l2->nn_iters = p_nn->nn_iters = 5;
-  p_nn->cores = omp_get_num_procs();
 
   init_params(p_nn);
 
