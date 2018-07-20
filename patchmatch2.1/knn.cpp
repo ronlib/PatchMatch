@@ -46,7 +46,6 @@ using namespace stdext;
 #endif
 
 #define HISTO_ANGLES 32
-#define M_PI 3.1415926535897932384626433832795
 
 #define accurate_timer() 0.0
 
