@@ -15,6 +15,7 @@
 #include "allegro_emu.h"
 #include "nn.h"
 #include "lua_inpaint.h"
+#include "patch2vec.h"
 #include <time.h>
 
 #define USE_L1 0
@@ -31,12 +32,14 @@
 #define DELTA_TERM DELTA_TERM_RGB_ex(dr, dg, db)
 #define DELTA_TERM_RGB(dr, dg, db) DELTA_TERM_RGB_ex(dr, dg, db)
 
-int nn16_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
-
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p) {
   if (p->nn_dist == 1 && TPATCH_W == 16) {
-    int ans = nn16_patch_dist(adata, b, bx, by, 0, p);
+    int ans = nn_patch_dist<16>(adata, b, bx, by, 0, p);
+    return ans;
+  }
+  else if (p->nn_dist == 1 && TPATCH_W == 32) {
+    int ans = nn_patch_dist<32>(adata, b, bx, by, 0, p);
     return ans;
   }
   else if (IS_WINDOW) {
@@ -115,7 +118,8 @@ void attempt_n(int &err, int &xbest, int &ybest, int *adata, BITMAP *b, int bx, 
 		/* clock_t start, end; */
 		/* double cpu_time_used; */
 		/* start = clock(); */
-		if (p->nn_dist == 1 && PATCH_W == 16) { current =  nn16_patch_dist(adata, b, bx, by, err, p); }
+		if (p->nn_dist == 1 && PATCH_W == 16) { current =  nn_patch_dist<16>(adata, b, bx, by, err, p); }
+    else if (p->nn_dist == 1 && PATCH_W == 32) { current =  nn_patch_dist<32>(adata, b, bx, by, err, p); }
 
 		else { current = fast_patch_dist<PATCH_W, IS_WINDOW>(adata, b, bx, by, err, p); }
 		/* end = clock(); */
@@ -134,7 +138,11 @@ template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_nobranch(int *adata, BITMAP *b, int bx, int by, Params *p) {
   //if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return INT_MAX; }
   if (p->nn_dist == 1 && TPATCH_W == 16) {
-    int ans = nn16_patch_dist(adata, b, bx, by, 0, p);
+    int ans = nn_patch_dist<16>(adata, b, bx, by, 0, p);
+    return ans;
+  }
+  else if (p->nn_dist == 1 && TPATCH_W == 32) {
+    int ans = nn_patch_dist<32>(adata, b, bx, by, 0, p);
     return ans;
   }
   else if (IS_WINDOW) {
@@ -199,7 +207,12 @@ int patch_dist_ab(Params *p, BITMAP *a, int ax, int ay, BITMAP *b, int bx, int b
   if (region_masks && ((int *) region_masks->bmp->line[ay])[ax] != ((int *) region_masks->bmp->line[by])[bx]) { return INT_MAX; }
 
   if (p->nn_dist == 1 && TPATCH_W == 16) {
-    int ans = nn16_patch_dist_ab(a, ax, ay, b, bx, by, 0, p); // maxval has no meaning
+    int ans = nn_patch_dist_ab<16>(a, ax, ay, b, bx, by, 0, p); // maxval has no meaning
+                                                              //  when using neural network
+    return ans;
+  }
+  else if (p->nn_dist == 1 && TPATCH_W == 32) {
+    int ans = nn_patch_dist_ab<32>(a, ax, ay, b, bx, by, 0, p); // maxval has no meaning
                                                               //  when using neural network
     return ans;
   }

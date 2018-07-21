@@ -9,6 +9,7 @@
 #include <float.h>
 
 #include "patch.h"
+#include "patch2vec.h"
 
 static char AdobePatentID_P876E1[] = "AdobePatentID=\"P876E1\""; // AdobePatentID="P876E1"
 static char AdobePatentID_P962[] = "AdobePatentID=\"P962\""; // AdobePatentID="P962"
@@ -624,7 +625,10 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 								int err0 = ((int *) annd->line[y])[x+dx];
 
                 if (p->nn_dist == 1 && PATCH_W == 16) {
-                  err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
+                  err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
+                }
+                else if (p->nn_dist == 1 && PATCH_W == 32) {
+                  err0 = nn_patch_dist_ab<32>(a, x, y, b, xpp, ypp, 0, p);
                 }
                 else {
                   // faster way to calculate error with known error( Neighbor(ax,ay), MatchInB(Neighbor(ax,ay)) )
@@ -672,7 +676,10 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                 int err0 = ((int *) annd->line[y+dy])[x];
 
                 if (p->nn_dist == 1 && PATCH_W == 16) {
-                  err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
+                  err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
+                }
+                else if (p->nn_dist == 1 && PATCH_W == 32) {
+                  err0 = nn_patch_dist_ab<32>(a, x, y, b, xpp, ypp, 0, p);
                 }
                 else {
                   int ya = dy, yb = 0;
@@ -997,7 +1004,10 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                   int err0 = ((int *) annd->line[y])[x+dx];
 
                   if (p->nn_dist == 1 && PATCH_W == 16) {
-                    err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
+                    err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
+                  }
+                  else if (p->nn_dist == 1 && PATCH_W == 32) {
+                    err0 = nn_patch_dist_ab<32>(a, x, y, b, xpp, ypp, 0, p);
                   }
                   else {
                     int xa = dx, xb = 0;
@@ -1043,7 +1053,10 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                   int err0 = ((int *) annd->line[y+dy])[x];
 
                   if (p->nn_dist == 1 && PATCH_W == 16) {
-                    err0 = nn16_patch_dist_ab(a, x, y, b, xpp, ypp, 0, p);
+                    err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
+                  }
+                  else if (p->nn_dist == 1 && PATCH_W == 32) {
+                    err0 = nn_patch_dist_ab<32>(a, x, y, b, xpp, ypp, 0, p);
                   }
                   else {
                     int ya = dy, yb = 0;
