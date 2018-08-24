@@ -40,6 +40,14 @@ function create_tensor_from_image_storage(storage, H, W, num_channels)
 	 return t
 end
 
+function compute_patch2vec(patch1_storage_obj, H, W, num_channels)
+	 local ffi = require 'ffi'
+   print (string.format("H=%d W=%d num_channels=%d array_size=%d", H, W, num_channels, patch1_storage_obj:size()))
+   local patch1 = create_tensor_from_image_storage(patch1_storage_obj, H, W, num_channels)
+	 local v1 = NN:forward(patch1):clone()
+   return v1:storage(), tonumber(ffi.cast('intptr_t', v1:data()))
+end
+
 function compute_patches_distance_NN(patch1_storage_obj, patch2_storage_obj, H, W, num_channels)
 	 local patch1 = create_tensor_from_image_storage(patch1_storage_obj, H, W, num_channels)
 	 local patch2 = create_tensor_from_image_storage(patch2_storage_obj, H, W, num_channels)

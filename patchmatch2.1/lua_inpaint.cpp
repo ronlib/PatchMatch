@@ -20,6 +20,8 @@ extern "C" {
 #include "lua_inpaint.h"
 #include "export_def.h"
 
+#include "patch2vec.h"
+
 
 #define MODE_IMAGE  0
 #define MODE_VECB   1
@@ -71,6 +73,8 @@ BITMAP *convert_to_bitmap(unsigned char* im_buf, int w, int h);
 */
 static int compare_patchmatch(lua_State *L);
 
+static int patch2vec_image(lua_State *L);
+
 lua_State * g_L = 0;
 
 extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
@@ -80,6 +84,7 @@ extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
 		{"vote", vote},
 		{"inpaint", lua_inpaint},
     {"compare_nn_l2", compare_patchmatch},
+    {"patch2vec_image", patch2vec_image},
 		{NULL, NULL}
 	};
 
@@ -516,7 +521,40 @@ BITMAP *scale_image(BITMAP *image, int hs, int ws)
 	return ans;
 }
 
+static int patch2vec_image(lua_State *L)
+{
+  int nin = lua_gettop(L);
+	int i = 1;
+  if (nin < 2) {
+    luaL_error(g_L, "patch2vec_image requires 2 argument2");
+  }
 
+  Params *p = new Params();
+  p->patch_w = 32;
+  float *tmp_vec = (float*) calloc(PATCH2VEC_LENGTH, sizeof(float));
+  const char * image_file_path = luaL_checkstring(L, i);	i++;
+  const char * output_file_path = luaL_checkstring(L, i);	i++;
+
+  // const char * A_file_path = luaL_checkstring(L, i);	i++;
+  BITMAP *a = load_bitmap(image_file_path);
+  FILE *f = fopen(output_file_path, "wb");
+  if (!f) { error(L, "Does not currently support ainit\n"); }
+  for (int y=0 ; y < a->h - p->patch_w+1 ; y++) {
+    for (int x=0 ; x < a->w - p->patch_w+1 ; x++) {
+      printf("patch2vec_image: y=%d x=%d\n", y, x);
+      int retval = nn_patch2vec(a, x, y, p, tmp_vec);
+      if (0 != retval) {
+        memset(tmp_vec, 0, sizeof(float)*PATCH2VEC_LENGTH);
+      }
+      fwrite(tmp_vec, sizeof(float), PATCH2VEC_LENGTH, f);
+    }
+  }
+
+  fclose(f);
+  free(tmp_vec); tmp_vec = NULL;
+
+  return 2;
+}
 
 static int compare_patchmatch(lua_State *L)
 {
@@ -576,6 +614,63 @@ static int compare_patchmatch(lua_State *L)
 	lua_pop(g_L, 2);
   free(full_path2);
   free(full_path1);
+
+  return 0;
+}
+
+/*
+  ret_arr should be a pointer to a float[128] buffer
+
+  returns -1 in case of an error, 0 if the operation succeedded
+*/
+int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
+{
+  if (NULL == ret_arr) {
+    fprintf(stderr, "nn_patch2vec should be passed with valid references\n");
+    exit(1);
+  }
+
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
+
+	unsigned char *abuf;
+	abuf = (unsigned char*)calloc(p->patch_w*p->patch_w*3, sizeof(unsigned char));
+	for (int dy = 0 ; dy < p->patch_w ; dy++) {
+    unsigned char *abufrow = &abuf[p->patch_w*dy];
+		int *arow = (int*)(a->line[ay+dy]);
+		for (int dx = 0 ; dx < p->patch_w ; dx++) {
+			int ad = arow[ax+dx];
+			unsigned char *ar = &abufrow[3*dx];
+			ar[0] = ad&255;			   	// r
+			ar[1] = (ad>>8)&255;		// g
+			ar[2] = (ad>>16)&255;		// b
+		}
+	}
+
+	THByteStorage *a_th_storage, *b_th_storage;
+	a_th_storage = THByteStorage_newWithData(abuf, p->patch_w*p->patch_w*3);
+
+	lua_getglobal(g_L, "compute_patch2vec");
+	luaT_pushudata(g_L, a_th_storage, "torch.ByteStorage");
+	lua_pushnumber(g_L, p->patch_w);
+	lua_pushnumber(g_L, p->patch_w);
+	lua_pushnumber(g_L, 3);
+
+	if (lua_pcall(g_L, 4, 2, 0) != 0)
+		{
+			luaL_error(g_L, "error running function `f': %s",
+                 lua_tostring(g_L, -1));
+      return -1;
+		}
+
+	float *vec = (float*)(long long)luaL_checknumber(g_L, -1);
+  memcpy(ret_arr, vec, PATCH2VEC_LENGTH*sizeof(float));
+	lua_pop(g_L, 2);
+
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  printf("patch2vec: %f sec\n", cpu_time_used);
 
   return 0;
 }

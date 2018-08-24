@@ -16,6 +16,9 @@ extern "C" {
 #include "luaT.h"
 }
 
+#define PATCH2VEC_LENGTH 128
+
+
 template<int LENGTH>
 int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
 
