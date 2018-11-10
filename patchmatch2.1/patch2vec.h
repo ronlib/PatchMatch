@@ -52,13 +52,13 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
 	bbuf = (unsigned char*)calloc(LENGTH*LENGTH*3, sizeof(unsigned char));
 
 	for (int dy = 0 ; dy < LENGTH ; dy++) {
-		unsigned char *abufrow = &abuf[3*LENGTH*dy];
+    unsigned char *abufrow = &abuf[3*LENGTH*dy];
 		unsigned char *bbufrow = &bbuf[3*LENGTH*dy];
-		int *arow = &adata[LENGTH*dy];
-		int *brow = ((int *) b->line[by+dy])+bx;
-		for (int dx = 0 ; dx < LENGTH ; dx++) {
+    int *arow = &adata[LENGTH*dy];
+    int *brow = ((int *) b->line[by+dy])+bx;
+    for (int dx = 0 ; dx < LENGTH ; dx++) {
 			int ad = arow[dx];
-			int bd = brow[dx];
+      int bd = brow[dx];
 			unsigned char *ar = &abufrow[3*dx];
 			unsigned char *br = &bbufrow[3*dx];
 			ar[0] = ad&255;			   	// r
@@ -81,20 +81,20 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
 	lua_pushnumber(g_L, LENGTH);
 	lua_pushnumber(g_L, 3);
 
-	if (lua_pcall(g_L, 5, 1, 0) != 0)
-		{
-			luaL_error(g_L, "error running function `f': %s",
+  if (lua_pcall(g_L, 5, 1, 0) != 0)
+    {
+      luaL_error(g_L, "error running function `f': %s",
                  lua_tostring(g_L, -1));
-		}
+    }
 
-	int lua_return_val = (int)(luaL_checknumber(g_L, -1)*INT_MAX);
-	lua_pop(g_L, 1);
+  int lua_return_val = (int)(luaL_checknumber(g_L, -1)*INT_MAX);
+  lua_pop(g_L, 1);
 
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
   printf("%f sec\n", cpu_time_used);
 
-	return lua_return_val;
+  return lua_return_val;
 }
 
 #endif
