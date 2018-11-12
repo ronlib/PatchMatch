@@ -19,6 +19,7 @@ extern "C" {
 #include "inpaint.h"
 #include "lua_inpaint.h"
 #include "export_def.h"
+#include "patch.h"
 
 #include "patch2vec.h"
 
@@ -73,6 +74,15 @@ BITMAP *convert_to_bitmap(unsigned char* im_buf, int w, int h);
 */
 static int compare_patchmatch(lua_State *L);
 
+
+/*
+  The function runs patch comparison using 2 methods: patch2vec and L2.
+  This function receives 2 arguments, one is a path to an image file, the other
+  one is the number of iterations to run. It runs the comparison against 32x32
+  patches.
+*/
+static int compare_patchmatch_performance(lua_State *L);
+
 static int patch2vec_image(lua_State *L);
 
 lua_State * g_L = 0;
@@ -85,6 +95,7 @@ extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
 		{"inpaint", lua_inpaint},
     {"compare_nn_l2", compare_patchmatch},
     {"patch2vec_image", patch2vec_image},
+    {"compare_patchmatch_performance", compare_patchmatch_performance},
 		{NULL, NULL}
 	};
 
@@ -555,6 +566,48 @@ static int patch2vec_image(lua_State *L)
 
   return 2;
 }
+
+static int compare_patchmatch_performance(lua_State *L)
+{
+  int nin = lua_gettop(L);
+	int i = 1;
+  if (nin < 2) {
+    luaL_error(g_L, "compare_patchmatch_performance requires 2 argument");
+  }
+
+  const char * image_file_path = luaL_checkstring(L, i);	i++;
+  int number_of_runs = luaL_checknumber(L, i); i++;
+
+
+  BITMAP *a = load_bitmap(image_file_path);
+  int y = 0, x = 0;
+  clock_t start={0}, end={0};
+  double cpu_time_used = 0;
+
+  Params *p = new Params();
+  p->patch_w = 32;
+  p->nn_dist = 1;
+
+  start = clock();
+  for (int counter = number_of_runs ; counter > 0 ; counter--) {
+    int retval = nn_patch_dist_ab<32>(a, x, y, a, x, y, 0x0fffffff, p);
+  }
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  printf("Running %d iterations under patch2vec took %f seconds\n", number_of_runs, cpu_time_used);
+
+  p->nn_dist = 0;
+  start = clock();
+  for (int counter = number_of_runs ; counter > 0 ; counter--) {
+    patch_dist_ab<32, 0, 0>(p, a, x, y, a, x, y, 0x0fffffff, NULL);
+  }
+  end = clock();
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  printf("Running %d iterations under L2 patchmatch took %f seconds\n", number_of_runs, cpu_time_used);
+
+  return 2;
+}
+
 
 static int compare_patchmatch(lua_State *L)
 {
