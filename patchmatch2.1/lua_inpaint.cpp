@@ -690,7 +690,7 @@ int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
 	unsigned char *abuf;
 	abuf = (unsigned char*)calloc(p->patch_w*p->patch_w*3, sizeof(unsigned char));
 	for (int dy = 0 ; dy < p->patch_w ; dy++) {
-    unsigned char *abufrow = &abuf[p->patch_w*dy];
+    unsigned char *abufrow = &abuf[p->patch_w*dy*3];
 		int *arow = (int*)(a->line[ay+dy]);
 		for (int dx = 0 ; dx < p->patch_w ; dx++) {
 			int ad = arow[ax+dx];

@@ -32,8 +32,7 @@ function create_tensor_from_image_storage(storage, H, W, num_channels)
    else
       t = torch.ByteTensor(storage):float()/255
    end
-	 t = t:view(num_channels, H, W)
-	 t = t:transpose(2,3):transpose(1,2)
+	 t = t:view(H, W, num_channels):transpose(2,3):transpose(1,2)
 	 t = t:contiguous()
 	 -- Adding 1 to fit to the NN input dimensions
 	 t = t:view(1, num_channels, H, W)
