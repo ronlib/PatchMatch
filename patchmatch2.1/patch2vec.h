@@ -92,7 +92,7 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
 
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  printf("%f sec\n", cpu_time_used);
+  printf("Patch2Vec: %f sec\n", cpu_time_used);
 
   return lua_return_val;
 }

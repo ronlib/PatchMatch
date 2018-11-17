@@ -155,7 +155,7 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
     int *arow = amask ? (int *) amask->bmp->line[y]: NULL;
     for (int x = box.xmin; x < box.xmax; x++) {
       if (IS_MASK && amask && arow[x]) { continue; }
-      printf("init_dist_n: y=%d\n", y);
+      printf("init_dist_n: y=%d, x=%d\n", y, x);
 
       int xp, yp;
       getnn(ann, x, y, xp, yp);
