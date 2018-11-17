@@ -431,7 +431,7 @@ int lua_inpaint(lua_State *L)
 	BITMAP *mask = load_bitmap(mask_file_path);
 
   // Must be 16 to support our specific neural network
-  p->patch_w = 16;
+  p->patch_w = 32;
   // Indicating to using a neural network
   p->nn_dist = 1;
 	init_params(p);
