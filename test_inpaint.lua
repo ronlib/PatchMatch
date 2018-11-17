@@ -7,4 +7,9 @@ require 'patch2vec'
 patch2vec_init('model_750_50000_32_180804.t7')
 
 nnluainpaint = require("libpatchmatch2")
-nnluainpaint.inpaint('forest-hole.bmp', 'forest-mask.bmp', 1, 2, 0, 100)
+nnluainpaint.inpaint('/home/ron/studies/project/PatchMatch/image_files/forest/forest.bmp', 'forest-mask-1-point.png',
+                     5,         -- nn_iters
+                     7,         -- inpaint_border
+                     0,         -- inpaint_min_level
+                     50         -- threshold
+)
