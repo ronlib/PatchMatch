@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <cassert>
+#include <climits>
 
 #include "nn.h"
 #include "lua_inpaint.h"
@@ -67,7 +68,7 @@ enum TransformOperation
 BITMAP *create_transformed_mask(Params *p, BITMAP *mask, int min_edge_distance,
                        int mask_center_offset, int border_size, int transform_operation);
 void draw_box_around_mask_point(BITMAP *mask, int x, int y, int border);
-
+void visualize_nnf(BITMAP *nn, const char* filename);
 // #define CENTER_MASK_PIXEL(p, position) position-p->patch_w/2
 #define CENTER_MASK_PIXEL(offset, position) position-offset
 // #define UNCENTER_MASK_PIXEL(p, position) position+p->patch_w/2
@@ -149,12 +150,24 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
       snprintf(filename, sizeof(filename)/sizeof(char),
                "upscaled_image_level_%d.png", level);
       save_bitmap(upscaled.image, filename);
-      destroy_bitmap(inpainted_image); inpainted_image = 0;
       destroy_bitmap(ann); ann = 0;
-
       ann = upscaled.ann;
-      // copy_unmasked_nnf_regions(p, timage, tamask, ann);
-      inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann);
+
+      // Similar to what younesse did see "Space-Time Video Completion" - page 5),
+      // but different in that we copy the unmasked pixels for every pyramid level
+      if (/*level == 0*/1) {
+        destroy_bitmap(inpainted_image); inpainted_image = 0;
+        // copy_unmasked_nnf_regions(p, timage, tamask, ann);
+        inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann);
+      }
+      // else {
+      //   BITMAP *tmp = inpainted_image;
+      //   inpainted_image = scale_image(inpainted_image,
+      //                                 pyramid.images_pyramid[level]->h,
+      //                                 pyramid.images_pyramid[level]->w);
+      //   inpainted_image = inpaint_image(p, &pyramid, inpainted_image, rm_inv_inpainted_patch_mask, level, ann);
+      //   destroy_bitmap(tmp);
+      // }
       destroy_bitmap(upscaled.image);
       snprintf(filename, sizeof(filename)/sizeof(char),
                "inpainted_image_level_%d.png", level);
@@ -169,31 +182,6 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
   free_pyramid(&pyramid);
 
   return NULL;
-  // Inpaint the last level of the pyramid
-  // Defining temporaries
-
-
-
-  // copy_unmasked_nnf_regions(p, timage, tamask, ann);
-  // BITMAP *ret_inpainted = inpaint_image(p, timage, tmask, tamask, ann);
-  // delete tamask;
-  // save_bitmap(ret_inpainted, "ans.bmp");
-
-  // UpscaleInpintedImageRetVal upscaled = upscale_image_nn(p, &pyramid, ret_inpainted, ann, pyramid.max_pyramid_level-2);
-  // destroy_bitmap(ret_inpainted);
-  // destroy_bitmap(ann);
-
-  // save_bitmap(ret_inpainted, "ans2.bmp");
-  // timage = pyramid.masks_pyramid[pyramid.max_pyramid_level-2];
-  // tmask = pyramid.masks_pyramid[pyramid.max_pyramid_level-2];
-  // tinv_mask = pyramid.inv_masks_pyramid[pyramid.max_pyramid_level-2];
-  // tamask = new RegionMasks(p, tinv_mask, /*full=*/0);
-  // BITMAP *ret_inpainted2 = inpaint_image(p, ret_inpainted, tmask, tamask, ann);
-  // save_bitmap(ret_inpainted2, "ans3.bmp");
-  // destroy_bitmap(ret_inpainted);
-
-
-  // destroy_region_masks(tamask);
 }
 
 
@@ -376,7 +364,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                            bmask,                 // bmask
                            NULL,                  // region_masks, seperating regions
                            rm_inv_inpainted_patch_mask);
-  for(int i = 0 ; i < 2 ; i++) {
+  for(int i = 0 ; i < (pyramid->max_pyramid_level+1 - level) ; i++) {
     nn(p, inpainted_image, orig_image, ann, annd, rm_inv_inpainted_patch_mask, /*bmask=*/bmask, 0, 0, rp, 0, 0, 0,
        /*region_masks=*/NULL, p->cores, NULL, NULL);
     minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, bmask, /*level=*/0, 0, rp,
@@ -607,4 +595,20 @@ void draw_box_around_mask_point(BITMAP *mask, int x, int y, int border)
   //   if (ty >= 0 && ty < mask->h)
   //     ((int*)mask->line[ty])[x] = 0xffffff;
   // }
+}
+
+void visualize_nnf(BITMAP *nn, const char* filename) {
+  BITMAP *visualized_nnf = create_bitmap(nn->w, nn->h);
+  double max_distance = sqrt(nn->w*nn->w+nn->h*nn->h);
+  for (int y = 0 ; y < nn->h ; y++) {
+    for (int x = 0 ; x < nn->w ; x++) {
+      int *nnf = (int*)&(((nn->line[y])[4*x]));
+      int dy = INT_TO_Y(*nnf), dx = INT_TO_X(*nnf);
+      unsigned char distance = (unsigned char)255*(sqrt((double)((dy-y)*(dy-y) + (dx-x)*(dx-x)))/max_distance);
+      *(int*)&((visualized_nnf->line[y])[4*x]) = distance | distance << 8 | distance << 16 | distance << 24;
+    }
+  }
+
+  save_bitmap(visualized_nnf, filename);
+  destroy_bitmap(visualized_nnf);
 }
