@@ -1,5 +1,5 @@
 struct BITMAP;
-struct Params;
+class Params;
 
 BITMAP* downscale_image(BITMAP *image);
 BITMAP *scale_image(BITMAP *image, int hs, int ws);

@@ -212,7 +212,8 @@ BITMAP *vote_n(Params *p, BITMAP *b,
 	    if (amask && amask_row[ax]) { continue; }
       int bx, by;
       getnn(ann, ax, ay, bx, by);
-	  // Note: currently an output patch CANNOT vote to an input patch outside the mask 'bmask' (this seems reasonable)
+      // Note: currently an output patch CANNOT vote to an input patch outside the mask 'bmask' (this seems reasonable)
+      // Note: bmask = pyramid->bmasks_pyramid[level]
       if (!mask_self_only && bmask && ((int *) bmask->line[by])[bx]) { continue; }
 
       double w = wa;

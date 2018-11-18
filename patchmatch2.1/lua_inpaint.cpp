@@ -433,7 +433,7 @@ int lua_inpaint(lua_State *L)
   // Must be 16 to support our specific neural network
   p->patch_w = 32;
   // Indicating to using a neural network
-  p->nn_dist = 1;
+  p->nn_dist = 0;
 	init_params(p);
 
 	inpaint(p, image, mask);
@@ -497,7 +497,7 @@ BITMAP *downscale_image(BITMAP *image)
 
 BITMAP *scale_image(BITMAP *image, int hs, int ws)
 {
-	unsigned char *im_scaled;
+	unsigned char *im_scaled = 0;
 
   TorchImageStorage torch_image = convert_to_torch_image(image);
 
@@ -518,10 +518,9 @@ BITMAP *scale_image(BITMAP *image, int hs, int ws)
 	// Free unused memory
 	free(torch_image.buffer);
 
-	if (luaL_checknumber(g_L, -1))
-		{
-			im_scaled = (unsigned char*)(long long)luaL_checknumber(g_L, -1);
-		}
+	if (luaL_checknumber(g_L, -1)) {
+    im_scaled = (unsigned char*)(long long)luaL_checknumber(g_L, -1);
+  }
 	else
 		luaL_error(g_L, "Returned non torch.ByteStorage from function");
 
@@ -546,8 +545,8 @@ static int patch2vec_image(lua_State *L)
   const char * image_file_path = luaL_checkstring(L, i);	i++;
   const char * output_file_path = luaL_checkstring(L, i);	i++;
 
-  // const char * A_file_path = luaL_checkstring(L, i);	i++;
   BITMAP *a = load_bitmap(image_file_path);
+
   FILE *f = fopen(output_file_path, "wb");
   if (!f) { error(L, "Does not currently support ainit\n"); }
   for (int y=0 ; y < a->h - p->patch_w+1 ; y++) {
