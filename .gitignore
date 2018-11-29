@@ -4,6 +4,15 @@
 **/*.out
 **/*.html
 *.cmake
+*.png
+*.jpg
+*.bmp
+*.t7
+*.tar.gz
+*.txt
+*.a
+*.ipynb
+compile_commands.json
 GPATH
 GRTAGS
 GTAGS
