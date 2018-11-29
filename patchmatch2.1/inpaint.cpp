@@ -23,7 +23,8 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask);
   returned via the returned struct, as well as the inpainted image.
 */
 BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
-                      RegionMasks *amask, int level, BITMAP *ann=NULL);
+                      RegionMasks *rm_inv_inpainted_patch_mask, int level,
+                      BITMAP *ann=NULL, bool add_completion=false);
 /*
   This function copies each unmasked pixel from orig_image to image.
 */
@@ -69,6 +70,7 @@ BITMAP *create_transformed_mask(Params *p, BITMAP *mask, int min_edge_distance,
                        int mask_center_offset, int border_size, int transform_operation);
 void draw_box_around_mask_point(BITMAP *mask, int x, int y, int border);
 void visualize_nnf(BITMAP *nn, const char* filename);
+BITMAP* create_black_box(int h, int w);
 // #define CENTER_MASK_PIXEL(p, position) position-p->patch_w/2
 #define CENTER_MASK_PIXEL(offset, position) position-offset
 // #define UNCENTER_MASK_PIXEL(p, position) position+p->patch_w/2
@@ -106,13 +108,17 @@ public:
   // When the value is 0, we wish to inpaint that patch
   BITMAP **inv_inpainted_patch_masks;
 
+  // All black image for marking regions we wish to inpaint in case of extended
+  // inpainting
+  BITMAP **black;
+
   int max_pyramid_level;
 
   Pyramid(int max_pyramid_level_=0): max_pyramid_level(max_pyramid_level_) {}
 };
 
 
-BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
+BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
 {
   char filename[128];
   Pyramid pyramid;
@@ -138,7 +144,8 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
                                       image,                         // image to inpaint
                                       rm_inv_inpainted_patch_mask,   // mask of patches to inpaint
                                       level,
-                                      ann);                          // precomputed ann
+                                      ann,                          // precomputed ann
+                                      add_completion);
       snprintf(filename, sizeof(filename)/sizeof(char),
                "inpainted_image_level_%d.png", level);
       save_bitmap(inpainted_image, filename);
@@ -158,7 +165,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
       if (/*level == 0*/1) {
         destroy_bitmap(inpainted_image); inpainted_image = 0;
         // copy_unmasked_nnf_regions(p, timage, tamask, ann);
-        inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann);
+        inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann, add_completion);
       }
       // else {
       //   BITMAP *tmp = inpainted_image;
@@ -207,6 +214,7 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
   // pyramid->inv_masks_pyramid = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
   pyramid->inv_inpainted_patch_masks =
     (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
+  pyramid->black = (BITMAP**)malloc(sizeof(BITMAP*)* pyramid->max_pyramid_level);
 
   for (level=0 ; level < pyramid->max_pyramid_level ; level++) {
     BITMAP *scaled_mask_copy = 0;
@@ -266,8 +274,10 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
 
     snprintf(filename, 128, "inpainted_patch_masks_level_%d.png", level);
     save_bitmap(pyramid->inpainted_patch_masks[level], filename);
-    // snprintf(filename, 128, "inv_mask_level_%d.png", level);
-    // save_bitmap(pyramid->inv_masks_pyramid[level], filename);
+
+    pyramid->black[level] = create_black_box(pyramid->bmasks[level]->h, pyramid->bmasks[level]->w);
+    snprintf(filename, 128, "black_level_%d.png", level);
+    save_bitmap(pyramid->black[level], filename);
   }
   destroy_bitmap(scaled_mask);
 }
@@ -298,11 +308,13 @@ UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP 
   // TODO: Consider removing this and then the whole function (just use
   //       copy_unmasked_regions). Not sure if there is a meaning to upscaling
   //       the NNF. PatchMatch will do pretty good without it.
-  for (int y = 0; y < h; y++) {
-    int *annrow = (int *)(ann)->line[y/2];
+  int h_ = std::min(h, image->h*2);
+  int w_ = std::min(h, image->w*2);
+  for (int y = 0; y < h_; y++) {
+    int *annrow = (int *)(ann->line[y/2]);
     int *nannrow = (int *)nann->line[y];
     int *inv_inpainted_patch_mask = (int *) pyramid->inv_inpainted_patch_masks[to_level]->line[y];
-    for (int x = 0; x < w; x++) {
+    for (int x = 0; x < w_; x++) {
       // Wherever there is no mask, NN for each neighbour is itself. Otherwise,
       // we set it to the scaled previous NN
       if (inv_inpainted_patch_mask[x]) {
@@ -333,7 +345,8 @@ void free_pyramid(Pyramid *pyramid)
 */
 
 BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
-                      RegionMasks *rm_inv_inpainted_patch_mask, int level, BITMAP *ann)
+                      RegionMasks *rm_inv_inpainted_patch_mask, int level,
+                      BITMAP *ann, bool add_completion)
 {
   /*
     1. Create an initial nnf by setting each patch's neighbour as itself, if it
@@ -346,38 +359,93 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   BITMAP *orig_image = pyramid->images_pyramid[level];
   BITMAP *bmask = pyramid->bmasks[level];
+  BITMAP *inv_bmask = inverse_mask_bitmap(bmask);
+  BITMAP *black = pyramid->black[level];
+  RegionMasks *rm_black = new RegionMasks(p, black);
+  RegionMasks *rm_bmask = new RegionMasks(p, bmask);
+  RegionMasks *rm_inv_bmask = new RegionMasks(p, inv_bmask);
   BITMAP *inpainted_image = image;
+  BITMAP *bnnd = NULL, *bnn = NULL;
+  rm_inv_inpainted_patch_mask = 0;
+  // TODO: remove
+  char filename[128] = {0};
 
   if (!ann) {
     ann = init_nn(p, image, orig_image, /*bmask=*/bmask, /*region_masks=*/NULL,
-                  /*amask=*/ rm_inv_inpainted_patch_mask, /*trim_patch=*/ 1, NULL, NULL);
+                  /*amask=*/ rm_inv_inpainted_patch_mask, /*trim_patch=*/ 1,
+                  /*ann_window=*/NULL, /*awinsize=*/NULL);
+  }
+
+  if (add_completion) {
+    bnn = init_nn(p, orig_image, image, /*bmask=*/black, /*region_masks=*/NULL,
+                  /*amask=*/ rm_bmask, /*trim_patch=*/ 1,
+                  /*ann_window=*/NULL, /*awinsize=*/NULL);
+
   }
 
   RecomposeParams *rp = new RecomposeParams();
 
-  // TODO: consider using inv_mask for bmask, because currently the function
-  //       would fill in every non-identical mask pixel between a and b with INT_MAX
   BITMAP *annd = init_dist(p,
                            image,
                            orig_image,            // b image
                            ann,                   // ann
                            bmask,                 // bmask
                            NULL,                  // region_masks, seperating regions
-                           rm_inv_inpainted_patch_mask);
-  for(int i = 0 ; i < (pyramid->max_pyramid_level+1 - level) ; i++) {
-    nn(p, inpainted_image, orig_image, ann, annd, rm_inv_inpainted_patch_mask, /*bmask=*/bmask, 0, 0, rp, 0, 0, 0,
-       /*region_masks=*/NULL, p->cores, NULL, NULL);
-    minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, bmask, /*level=*/0, 0, rp,
-          NULL, rm_inv_inpainted_patch_mask, p->cores);
+                           // We use rm_black in case of add_completion, because
+                           // only when completion term is added, we can be sure
+                           // that no artifacts will be added to the inpainted
+                           // image
+                           /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask);
+  if (add_completion) {
+    bnnd = init_dist(p,
+                     orig_image,
+                     image,                 // b image
+                     bnn,                   // ann
+                     black,                 // bmask
+                     NULL,                  // region_masks, seperating regions
+                     /*amask=*/rm_bmask);
+  }
+  for(int i = 0 ; i < (pyramid->max_pyramid_level+10 - level) ; i++) {
+    nn(p, inpainted_image, orig_image, ann, annd,
+       /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask,
+       /*bmask=*/bmask, 0, 0, rp, 0, 0, 0, /*region_masks=*/NULL, p->cores, NULL,
+       NULL);
+    minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, /*bmask=*/bmask, /*level=*/0, 0, rp,
+          /*region_masks=*/NULL, /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask, p->cores);
+    snprintf(filename, 128, "ann_level_%d_iter_%d.png", level, i);
+    visualize_nnf(annd, filename);
+
+    if (add_completion) {
+      nn(p, /*a=*/orig_image, /*b=*/inpainted_image, /*ann=*/bnn, /*annd=*/bnnd,
+         /*amask=*/rm_bmask, /*bmask=*/black, /*level=*/0, /*em_iter=*/0, rp, 0,
+         0, /*region_masks=*/0,
+         /*region_masks=*/NULL, p->cores, NULL, NULL);
+      minnn(p, orig_image, inpainted_image, bnn, bnnd, /*ann_prev=*/ bnn, /*bmask=*/bmask, /*level=*/0, 0, rp,
+            /*region_masks=*/NULL, /*amask*/rm_bmask, p->cores);
+      snprintf(filename, 128, "bnn_level_%d_iter_%d.png", level, i);
+      // visualize_nnf(bnnd, filename);
+
+    }
+
     BITMAP *temp = inpainted_image;
-    inpainted_image = vote(p, orig_image, ann, /*bnn=*/NULL, bmask, /*bweight=*/NULL,
-                           1, 0, rm_inv_inpainted_patch_mask, NULL, image, NULL, 0);
+    inpainted_image = vote(p, orig_image, ann, /*bnn=*/bnn, /*bmask=*/bmask, /*bweight=*/NULL,
+                           /*coherence_weight=*/1, /*complete_weight=*/add_completion ? 1 : 0,
+                           /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask, /*aweight=*/NULL,
+                           /*ainit=*/image, /*region_masks=*/NULL, /*aconstraint=*/0,
+                           /*mask_self_only=*/0);
+    snprintf(filename, 128, "inpainted_image_level_%d_iter_%d.png", level, i);
+    save_bitmap(inpainted_image, filename);
     if (i > 0)
       destroy_bitmap(temp);
+
   }
   // It is unnecessary to copy the unmasked regions, as they are copied during
   // the voting stage, because ann has correct values for unmasked regions
   // copy_unmasked_regions(p, inpainted_image, pyramid->masks_pyramid[level], orig_image);
+  printf("Finished inpaint_image, add_completion=%d\n", add_completion);
+
+  delete rm_black;
+  delete rm_bmask;
   delete rp;
   return inpainted_image;
 }
@@ -506,43 +574,7 @@ BITMAP *create_transformed_mask(Params *p, BITMAP *mask, int min_edge_distance,
       if ((transform_operation & ADD_BORDERS) && row[x]) {
         mask_points.push_back(XY_TO_INT(x, y));
       }
-
     }
-
-      ////////////////////////////////////////////////////////////////////////////////////
-      // if ((transform_operation & TRANSLATE_FROM_EDGES) && row[x] &&                  //
-      //     xmax-1-x < min_edge_distance && xmax-min_edge_distance >= 0) {             //
-      //   nx = xmax - min_edge_distance;                                               //
-      // }                                                                              //
-      // else if ((transform_operation & CENTER_MASK) && row[x] &&                      //
-      //          CENTER_MASK_PIXEL(p, x) >= 0) {                                       //
-      //   // We wish the masked pixel to be in the middle of the box. Without this     //
-      //   // line and it's correspondent in y, the box would stretch to the            //
-      //   // lower-right edge of the masked pixel                                      //
-      //   nx = CENTER_MASK_PIXEL(p, x);                                                //
-      // }                                                                              //
-      //                                                                                //
-      //                                                                                //
-      // if ((transform_operation & TRANSLATE_FROM_EDGES) &&                            //
-      //     row[x] && ymax-1-y < min_edge_distance && ymax-min_edge_distance >= 0) {   //
-      //   ny = ymax - min_edge_distance;                                               //
-      // }                                                                              //
-      // else if ((transform_operation & CENTER_MASK) && row[x] &&                      //
-      //          CENTER_MASK_PIXEL(p, y) >= 0) {                                       //
-      //   ny = CENTER_MASK_PIXEL(p, y);                                                //
-      // }                                                                              //
-      //                                                                                //
-      // // Adding (nx,ny) to a list of points, arround each a rectangle will be drawed //
-      // if (row[x]) {                                                                  //
-      //   mask_points.push_back(XY_TO_INT(nx, ny));                                    //
-      // }                                                                              //
-      //                                                                                //
-      // // Transferred pixels should be deleted from their original location           //
-      // if (nx != x || ny != y) {                                                      //
-      //   ((int *)ans->line[ny])[nx] = ((int *)mask->line[y])[x];                      //
-      //   ((int *)ans->line[y])[x] = 0;                                                //
-      // }                                                                              //
-      ////////////////////////////////////////////////////////////////////////////////////
   }
 
   int tborder_size = (transform_operation & ADD_BORDERS) ? border_size : 0;
@@ -551,33 +583,6 @@ BITMAP *create_transformed_mask(Params *p, BITMAP *mask, int min_edge_distance,
        iter != mask_points.end() ; ++iter) {
     draw_box_around_mask_point(ans, INT_TO_X(*iter), INT_TO_Y(*iter), tborder_size);
   }
-
-
-  // RegionMasks rm (p, mask);
-
-
-
-  // for (int y = 0 ; y < ymax ; y++) {
-  //   int *row = (int *)ans->line[y];
-  //   int *ansrow = (int *)ans->line[y];
-  //   for (int x = 0 ; x < xmax ; x++) {
-  //     // if (is_point_in_box(y, x, rm.box[255], p->inpaint_border)) {
-  //     //   row[x] = 0xffffff;
-  //     // }
-  //     if (row[x]) {
-  //       draw_box_around_mask_point(ans, y, x, p->inpaint_border);
-  //     }
-  //   }
-  // }
-
-
-  // Ugly, I know
-  // TODO: Make something nicer, use move semantics or something
-  // delete [] mask->line;
-  // delete [] mask->data;
-  // mask->line = ans->line;
-  // mask->data = ans->data;
-  // delete ans;
 
   return ans;
 }
@@ -591,10 +596,6 @@ void draw_box_around_mask_point(BITMAP *mask, int x, int y, int border)
         ((int*)mask->line[ty])[tx] = 0xffffff;
     }
   }
-
-  //   if (ty >= 0 && ty < mask->h)
-  //     ((int*)mask->line[ty])[x] = 0xffffff;
-  // }
 }
 
 void visualize_nnf(BITMAP *nn, const char* filename) {
@@ -611,4 +612,16 @@ void visualize_nnf(BITMAP *nn, const char* filename) {
 
   save_bitmap(visualized_nnf, filename);
   destroy_bitmap(visualized_nnf);
+}
+
+BITMAP* create_black_box(int h, int w) {
+  BITMAP *black_img = create_bitmap(w, h);
+
+  for (int y = 0 ; y < h ; y++) {
+    for (int x = 0 ; x < w ; x++) {
+      ((int*) black_img->line[y])[x] = 0;
+    }
+  }
+
+  return black_img;
 }

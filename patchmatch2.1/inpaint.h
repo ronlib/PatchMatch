@@ -5,7 +5,7 @@
 class BITMAP;
 class Params;
 
-BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask);
+BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion=false);
 
 
 #endif
