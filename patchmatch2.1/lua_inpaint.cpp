@@ -434,9 +434,9 @@ int lua_inpaint(lua_State *L)
   p->patch_w = 16;
   // Indicating to using a neural network
   p->nn_dist = 0;
-	init_params(p);
+  init_params(p);
   p->algo = ALGO_CPU;
-  inpaint(p, image, mask, 1);
+  inpaint(p, image, mask, 0);
 
   destroy_bitmap(image);
   destroy_bitmap(mask);

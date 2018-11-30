@@ -761,7 +761,8 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 
         ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
         ((int *) annd->line[y])[x] = err;
-        printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x\n", xbest, ybest, x, y, err);
+        printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
+               xbest, ybest, x, y, err, nn_iter);
       }
     }
   }
@@ -888,6 +889,8 @@ void nn_n_gpucpu(Params *p, BITMAP *a, BITMAP *b,
 
           ((int *) ann_out->line[y])[x] = XY_TO_INT(xbest, ybest);
           ((int *) annd_out->line[y])[x] = err;
+          printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
+                 xbest, ybest, x, y, err, nn_iter);
         }
       } /* Loop over y. */
       swap(ann, ann_out);
@@ -1149,6 +1152,8 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
           } else {
             ann_writeback[x] = XY_TO_INT(xbest, ybest);
             annd_writeback[x] = err;
+            printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
+                   xbest, ybest, x, y, err, nn_iter);
           }
 #endif
 
