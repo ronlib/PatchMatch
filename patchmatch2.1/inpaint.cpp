@@ -1,12 +1,13 @@
+#include "allegro_emu.h"
+#include "nn.h"
+#include "lua_inpaint.h"
+
 #include <cmath>
 #include <algorithm>
 #include <unistd.h>
 #include <cassert>
 #include <climits>
 
-#include "nn.h"
-#include "lua_inpaint.h"
-#include "allegro_emu.h"
 #include "inpaint.h"
 
 class Params;
@@ -24,7 +25,7 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask);
 */
 BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                       RegionMasks *rm_inv_inpainted_patch_mask, int level,
-                      BITMAP *ann=NULL, bool add_completion=false);
+                      BITMAP *ann=NULL);
 /*
   This function copies each unmasked pixel from orig_image to image.
 */
@@ -118,14 +119,14 @@ public:
 };
 
 
-BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
+BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
 {
   char filename[128];
   Pyramid pyramid;
   build_pyramid(p, &pyramid, a, mask);
 
 
-  BITMAP *ann = NULL, *inpainted_image = NULL;
+  BITMAP *ann = 0, *inpainted_image = 0;
   int min_level = p->max_inpaint_levels ? pyramid.max_pyramid_level-1 - p->max_inpaint_levels : 0;
 
   for (int level = pyramid.max_pyramid_level-1 ; level>=min_level ; level--) {
@@ -144,8 +145,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
                                       image,                         // image to inpaint
                                       rm_inv_inpainted_patch_mask,   // mask of patches to inpaint
                                       level,
-                                      ann,                          // precomputed ann
-                                      add_completion);
+                                      ann);                          // precomputed ann
       snprintf(filename, sizeof(filename)/sizeof(char),
                "inpainted_image_level_%d.png", level);
       save_bitmap(inpainted_image, filename);
@@ -165,16 +165,8 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
       if (/*level == 0*/1) {
         destroy_bitmap(inpainted_image); inpainted_image = 0;
         // copy_unmasked_nnf_regions(p, timage, tamask, ann);
-        inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann, add_completion);
+        inpainted_image = inpaint_image(p, &pyramid, upscaled.image, rm_inv_inpainted_patch_mask, level, ann);
       }
-      // else {
-      //   BITMAP *tmp = inpainted_image;
-      //   inpainted_image = scale_image(inpainted_image,
-      //                                 pyramid.images_pyramid[level]->h,
-      //                                 pyramid.images_pyramid[level]->w);
-      //   inpainted_image = inpaint_image(p, &pyramid, inpainted_image, rm_inv_inpainted_patch_mask, level, ann);
-      //   destroy_bitmap(tmp);
-      // }
       destroy_bitmap(upscaled.image);
       snprintf(filename, sizeof(filename)/sizeof(char),
                "inpainted_image_level_%d.png", level);
@@ -182,7 +174,6 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
     }
     delete rm_inv_inpainted_patch_mask;
   }
-
 
   destroy_bitmap(inpainted_image);
   destroy_bitmap(ann);
@@ -195,7 +186,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask, bool add_completion)
 void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
 {
 
-  int max_possible_levels = (int)log2((double)std::min(image->h, image->w)/p->patch_w) + 1;
+  int max_possible_levels = (int)log2(std::min(image->h, image->w)/p->patch_w) + 1;
   BITMAP *scaled_mask = NULL;
   char filename[128];
   int level = 0;
@@ -232,13 +223,8 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
 
       // TODO: restore previous line if the following change doesn't work out
       scaled_mask = downscale_image(/*scaled_mask*/ pyramid->masks_pyramid[level-1]);
-      /* destroy_bitmap(prev_mask); prev_mask = 0; */
-
-      /* scaled_mask_copy = new BITMAP(*scaled_mask); */
       threshold_image(scaled_mask, p->mask_threshold);
       pyramid->masks_pyramid[level] = scaled_mask;
-        // create_transformed_mask(p, scaled_mask_copy, p->patch_w,
-        //                p->patch_w/2, p->inpaint_border, ADD_BORDERS);
     }
 
     snprintf(filename, 128, "downscaled_image_%d.png", level);
@@ -254,9 +240,6 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
                               p->patch_w/2, // mask_center_offset
                               p->patch_w/2, // border_size
                               ADD_BORDERS | CENTER_MASK); // transform_operation
-    /* if (level != 0) {
-      destroy_bitmap(scaled_mask_copy);
-    } */
 
     snprintf(filename, 128, "bmask_%d.png", level);
     save_bitmap(pyramid->bmasks[level], filename);
@@ -346,7 +329,7 @@ void free_pyramid(Pyramid *pyramid)
 
 BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                       RegionMasks *rm_inv_inpainted_patch_mask, int level,
-                      BITMAP *ann, bool add_completion)
+                      BITMAP *ann)
 {
   /*
     1. Create an initial nnf by setting each patch's neighbour as itself, if it
@@ -359,24 +342,21 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   BITMAP *orig_image = pyramid->images_pyramid[level];
   BITMAP *bmask = pyramid->bmasks[level];
-  BITMAP *inv_bmask = inverse_mask_bitmap(bmask);
   BITMAP *black = pyramid->black[level];
   RegionMasks *rm_black = new RegionMasks(p, black);
   RegionMasks *rm_bmask = new RegionMasks(p, bmask);
-  RegionMasks *rm_inv_bmask = new RegionMasks(p, inv_bmask);
   BITMAP *inpainted_image = image;
   BITMAP *bnnd = NULL, *bnn = NULL;
-  rm_inv_inpainted_patch_mask = 0;
   // TODO: remove
   char filename[128] = {0};
 
   if (!ann) {
     ann = init_nn(p, image, orig_image, /*bmask=*/bmask, /*region_masks=*/NULL,
-                  /*amask=*/ rm_inv_inpainted_patch_mask, /*trim_patch=*/ 1,
+                  /*amask=*/ p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, /*trim_patch=*/ 1,
                   /*ann_window=*/NULL, /*awinsize=*/NULL);
   }
 
-  if (add_completion) {
+  if (p->inpaint_add_completion_term) {
     bnn = init_nn(p, orig_image, image, /*bmask=*/black, /*region_masks=*/NULL,
                   /*amask=*/ rm_bmask, /*trim_patch=*/ 1,
                   /*ann_window=*/NULL, /*awinsize=*/NULL);
@@ -385,18 +365,19 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
   RecomposeParams *rp = new RecomposeParams();
 
-  BITMAP *annd = init_dist(p,
-                           image,
-                           orig_image,            // b image
-                           ann,                   // ann
-                           bmask,                 // bmask
-                           NULL,                  // region_masks, seperating regions
-                           // We use rm_black in case of add_completion, because
-                           // only when completion term is added, we can be sure
-                           // that no artifacts will be added to the inpainted
-                           // image
-                           /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask);
-  if (add_completion) {
+  BITMAP *annd =
+    init_dist(p,
+              image,
+              orig_image,            // b image
+              ann,                   // ann
+              bmask,                 // bmask
+              NULL,                  // region_masks, seperating regions
+              // We use rm_black in case of add_completion, because
+              // only when completion term is added, we can be sure
+              // that no artifacts will be added to the inpainted
+              // image
+              /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask);
+  if (p->inpaint_add_completion_term) {
     bnnd = init_dist(p,
                      orig_image,
                      image,                 // b image
@@ -407,15 +388,15 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
   }
   for(int i = 0 ; i < (pyramid->max_pyramid_level+10 - level) ; i++) {
     nn(p, inpainted_image, orig_image, ann, annd,
-       /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask,
+       /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask,
        /*bmask=*/bmask, 0, 0, rp, 0, 0, 0, /*region_masks=*/NULL, p->cores, NULL,
        NULL);
     minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, /*bmask=*/bmask, /*level=*/0, 0, rp,
-          /*region_masks=*/NULL, /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask, p->cores);
+          /*region_masks=*/NULL, /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, p->cores);
     snprintf(filename, 128, "ann_level_%d_iter_%d.png", level, i);
     visualize_nnf(annd, filename);
 
-    if (add_completion) {
+    if (p->inpaint_add_completion_term) {
       nn(p, /*a=*/orig_image, /*b=*/inpainted_image, /*ann=*/bnn, /*annd=*/bnnd,
          /*amask=*/rm_bmask, /*bmask=*/black, /*level=*/0, /*em_iter=*/0, rp, 0,
          0, /*region_masks=*/0,
@@ -429,8 +410,8 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
 
     BITMAP *temp = inpainted_image;
     inpainted_image = vote(p, orig_image, ann, /*bnn=*/bnn, /*bmask=*/bmask, /*bweight=*/NULL,
-                           /*coherence_weight=*/1, /*complete_weight=*/add_completion ? 1 : 0,
-                           /*amask=*/add_completion ? rm_black : rm_inv_inpainted_patch_mask, /*aweight=*/NULL,
+                           /*coherence_weight=*/1, /*complete_weight=*/p->inpaint_add_completion_term ? 1 : 0,
+                           /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, /*aweight=*/NULL,
                            /*ainit=*/image, /*region_masks=*/NULL, /*aconstraint=*/0,
                            /*mask_self_only=*/0);
     snprintf(filename, 128, "inpainted_image_level_%d_iter_%d.png", level, i);
@@ -442,7 +423,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
   // It is unnecessary to copy the unmasked regions, as they are copied during
   // the voting stage, because ann has correct values for unmasked regions
   // copy_unmasked_regions(p, inpainted_image, pyramid->masks_pyramid[level], orig_image);
-  printf("Finished inpaint_image, add_completion=%d\n", add_completion);
+  printf("Finished inpaint_image, add_completion=%d\n", p->inpaint_add_completion_term);
 
   delete rm_black;
   delete rm_bmask;
@@ -605,7 +586,7 @@ void visualize_nnf(BITMAP *nn, const char* filename) {
     for (int x = 0 ; x < nn->w ; x++) {
       int *nnf = (int*)&(((nn->line[y])[4*x]));
       int dy = INT_TO_Y(*nnf), dx = INT_TO_X(*nnf);
-      unsigned char distance = (unsigned char)255*(sqrt((double)((dy-y)*(dy-y) + (dx-x)*(dx-x)))/max_distance);
+      unsigned char distance = (unsigned char)255*(sqrt(((long double)((dy-y)*(dy-y) + (dx-x)*(dx-x)))/max_distance));
       *(int*)&((visualized_nnf->line[y])[4*x]) = distance | distance << 8 | distance << 16 | distance << 24;
     }
   }

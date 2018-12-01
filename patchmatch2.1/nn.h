@@ -135,6 +135,8 @@ class Params { public:
   int mask_threshold;
   int max_inpaint_levels;    /* The max number of pyramid levels to inpaint. 0
                                 means no limit */
+  int inpaint_use_full_image_coherence;
+  int inpaint_add_completion_term;
 
   /* Defaults. */
   Params()
@@ -152,9 +154,6 @@ class Params { public:
      xmax(-1), ymax(-1),
      resample_seamcarv(0),
      vote_algo(VOTE_MEAN),
-     pca_dim(25),
-     pca_var(-1),
-     eps(2),
      prefer_coherent(0),
      allow_coherent(0),
      cores(2),
@@ -163,6 +162,9 @@ class Params { public:
      weight_r(1),
      weight_g(1),
      weight_b(1),
+     pca_dim(25),
+     pca_var(-1),
+     eps(2),
      kcoherence_k(2),
      kcoherence_iters(2),
      kcoherence_neighbors(8),
@@ -172,11 +174,13 @@ class Params { public:
      enrich_iters(0),
      enrich_times(1),
      do_inverse_enrich(1),
-		do_enrich(1),
-		nn_dist(0),
-    inpaint_border(4),
+     do_enrich(1),
+     nn_dist(0),
+     inpaint_border(4),
      mask_threshold(128),
-    max_inpaint_levels(0)
+     max_inpaint_levels(0),
+     inpaint_use_full_image_coherence(0),
+     inpaint_add_completion_term(0)
      { }
 };
 

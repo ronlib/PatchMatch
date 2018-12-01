@@ -436,7 +436,9 @@ int lua_inpaint(lua_State *L)
   p->nn_dist = 0;
   init_params(p);
   p->algo = ALGO_CPU;
-  inpaint(p, image, mask, 0);
+  p->inpaint_add_completion_term = 0;
+  p->inpaint_use_full_image_coherence = 0;
+  inpaint(p, image, mask);
 
   destroy_bitmap(image);
   destroy_bitmap(mask);

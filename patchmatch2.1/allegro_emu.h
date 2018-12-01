@@ -9,6 +9,7 @@ struct BITMAP {
   BITMAP(int ww = 1, int hh = 1): w(ww), h(hh) {}
   explicit BITMAP(const BITMAP &);
 };
+typedef struct BITMAP BITMAP;
 
 inline int _getpixel32(BITMAP *a, int x, int y) { return ((int *) a->line[y])[x]; }
 inline void _putpixel32(BITMAP *a, int x, int y, int c) { ((int *) a->line[y])[x] = c; }
