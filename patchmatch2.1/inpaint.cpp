@@ -169,7 +169,10 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
       }
       destroy_bitmap(upscaled.image);
       snprintf(filename, sizeof(filename)/sizeof(char),
-               "inpainted_image_level_%d.png", level);
+               "inpainted_image_level_%d_%s_%d_completion_%d_fullmask_%d_%d.png",
+               level, p->nn_dist ? "nn" : "l2",
+               p->nn_dist, p->inpaint_add_completion_term, p->inpaint_use_full_image_coherence,
+               p->patch_w);
       save_bitmap(inpainted_image, filename);
     }
     delete rm_inv_inpainted_patch_mask;
