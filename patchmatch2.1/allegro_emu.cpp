@@ -2,10 +2,12 @@
 #include "allegro_emu.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <cstring>
 
 BITMAP *create_bitmap(int w, int h) {
   BITMAP *ans = new BITMAP(w, h);
   ans->data = new unsigned char[4*w*h]; // always 32bit
+  memset(ans->data, 0, 4*w*h);
   ans->line = new unsigned char*[h];
   for (int y = 0; y < h; y++)
     ans->line[y] = &ans->data[y*4*w];

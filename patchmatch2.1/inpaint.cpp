@@ -295,7 +295,7 @@ UpscaleInpintedImageRetVal upscale_image_nn(Params *p, Pyramid *pyramid, BITMAP 
   //       copy_unmasked_regions). Not sure if there is a meaning to upscaling
   //       the NNF. PatchMatch will do pretty good without it.
   int h_ = std::min(h, image->h*2);
-  int w_ = std::min(h, image->w*2);
+  int w_ = std::min(w, image->w*2);
   for (int y = 0; y < h_; y++) {
     int *annrow = (int *)(ann->line[y/2]);
     int *nannrow = (int *)nann->line[y];
