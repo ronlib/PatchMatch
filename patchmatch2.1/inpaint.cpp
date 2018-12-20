@@ -393,8 +393,8 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
        /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask,
        /*bmask=*/bmask, 0, 0, rp, 0, 0, 0, /*region_masks=*/NULL, p->cores, NULL,
        NULL);
-    minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, /*bmask=*/bmask, /*level=*/0, 0, rp,
-          /*region_masks=*/NULL, /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, p->cores);
+    // minnn(p, inpainted_image, orig_image, ann, annd, /*ann_prev=*/ ann, /*bmask=*/bmask, /*level=*/0, 0, rp,
+    //       /*region_masks=*/NULL, /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, p->cores);
     snprintf(filename, 128, "ann_level_%d_iter_%d.png", level, i);
     visualize_nnf(annd, filename);
 
@@ -403,9 +403,9 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
          /*amask=*/rm_bmask, /*bmask=*/black, /*level=*/0, /*em_iter=*/0, rp, 0,
          0, /*region_masks=*/0,
          /*region_masks=*/NULL, p->cores, NULL, NULL);
-      minnn(p, orig_image, inpainted_image, bnn, bnnd, /*ann_prev=*/ bnn, /*bmask=*/bmask, /*level=*/0, 0, rp,
-            /*region_masks=*/NULL, /*amask*/rm_bmask, p->cores);
-      snprintf(filename, 128, "bnn_level_%d_iter_%d.png", level, i);
+      // minnn(p, orig_image, inpainted_image, bnn, bnnd, /*ann_prev=*/ bnn, /*bmask=*/bmask, /*level=*/0, 0, rp,
+      //       /*region_masks=*/NULL, /*amask*/rm_bmask, p->cores);
+      // snprintf(filename, 128, "bnn_level_%d_iter_%d.png", level, i);
       // visualize_nnf(bnnd, filename);
 
     }
