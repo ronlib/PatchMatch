@@ -765,6 +765,14 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                xbest, ybest, x, y, err, nn_iter);
       }
     }
+
+    {
+      char result_file_path[512];
+      snprintf(result_file_path, sizeof(result_file_path),
+               "ann_iter%d_%s.bmp", nn_iter, p->nn_dist ? "nn" : "l2");
+      save_bitmap(ann, result_file_path);
+    }
+
   }
   printf("done nn_n, did %d iters, rs_max=%d\n", nn_iter, p->rs_max);
 }
