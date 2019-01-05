@@ -52,7 +52,7 @@ function compute_patches_distance_NN(patch1_storage_obj, patch2_storage_obj, H, 
 	 local v1 = NN:forward(patch1):clone()
 	 local v2 = NN:forward(patch2):clone()
 	 -- Distance is 1-similarity
-	 local distance = 1-v1*v2
+	 local distance = torch.sqrt((v1-v2)*(v1-v2))
 	 return distance
 end
 
