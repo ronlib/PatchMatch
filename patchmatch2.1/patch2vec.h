@@ -87,7 +87,7 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
                  lua_tostring(g_L, -1));
     }
 
-  int lua_return_val = (int)(luaL_checknumber(g_L, -1)*INT_MAX);
+  int lua_return_val = (int)(luaL_checknumber(g_L, -1)*(INT_MAX/2));
   lua_pop(g_L, 1);
 
   end = clock();
