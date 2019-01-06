@@ -641,6 +641,9 @@ static int compare_patchmatch(lua_State *L)
   BITMAP *a = load_bitmap(A_file_path);
   BITMAP *b = load_bitmap(B_file_path);
 
+  init_p2v(a);
+  init_p2v(b);
+
   Params *p_nn = new Params();
   Params *p_l2 = new Params();
   p_l2->patch_w = p_nn->patch_w = 32;
