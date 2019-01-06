@@ -58,6 +58,7 @@ add_custom_command(TARGET luainpaint POST_BUILD
 
 add_library(patchmatch2 SHARED
 	patchmatch2.1/lua_inpaint.cpp
+  patchmatch2.1/patch2vec.h
 	patchmatch2.1/allegro_emu.cpp
 	patchmatch2.1/allegro_emu.h
 	patchmatch2.1/knn.cpp
@@ -77,6 +78,7 @@ add_library(patchmatch2 SHARED
 	patchmatch2.1/inpaint.h
 	)
 
+target_include_directories(patchmatch2 PRIVATE ${TH_INCLUDE_PATH})
 target_include_directories(patchmatch2 PRIVATE ${LUA_INCLUDE_DIR}//lua5.1)
 
 OPTION(INPAINT_VERBOSE "Make inpainting algorithm verbose" OFF) # Disabled by default
