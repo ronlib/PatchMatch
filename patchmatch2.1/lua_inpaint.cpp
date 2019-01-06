@@ -741,5 +741,5 @@ void init_p2v(BITMAP *im)
   im->p2vv = new unsigned char [im->h*im->w];
 
   memset(im->p2vd, 0, im->h*im->w*PATCH2VEC_LENGTH*sizeof(float));
-  memset(im->p2vv, 0, im->h*im->w*PATCH2VEC_LENGTH*sizeof(unsigned char));
+  memset(im->p2vv, 0, im->h*im->w*sizeof(unsigned char));
 }
