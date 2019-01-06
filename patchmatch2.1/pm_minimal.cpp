@@ -58,6 +58,8 @@ BITMAP *load_bitmap(const char *filename) {
 	BITMAP* ans = new BITMAP(bitmap->w, bitmap->h);
 	ans->data = (unsigned char*)bitmap->data;
 	ans->line = new unsigned char * [ans->h];
+  ans->p2vd = 0;
+  ans->p2vd = 0;
 	int w = ans->w, h = ans->h;
 
 	// No more need for bitmap

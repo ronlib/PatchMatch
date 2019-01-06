@@ -2,6 +2,7 @@
 /* Warning: weight BITMAPs always encode 32-bit floats, not ints. */
 
 #include "nn.h"
+#include <omp.h>
 #include <deque>
 #include <vector>
 #include <algorithm>
@@ -164,19 +165,23 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
         row[x] = INT_MAX; continue;
       }
 
-      for (int dy = 0; dy < PATCH_W; dy++) { // copy a patch from a to adata
-        int *drow = ((int *) a->line[y+dy])+x;
-        int *adata_row = adata+(dy*PATCH_W);
-        for (int dx = 0; dx < PATCH_W; dx++) {
-          adata_row[dx] = drow[dx];
+      if (p->nn_dist) {
+        row[x] = nn_patch_dist_ab<PATCH_W>(a, x, y, b, xp, yp, 0, p);
+      }
+      else {
+        for (int dy = 0; dy < PATCH_W; dy++) { // copy a patch from a to adata
+          int *drow = ((int *) a->line[y+dy])+x;
+          int *adata_row = adata+(dy*PATCH_W);
+          for (int dx = 0; dx < PATCH_W; dx++) {
+            adata_row[dx] = drow[dx];
+          }
         }
-      }
 
-      if (IS_MASK && bmask && ((int *) bmask->line[yp])[xp]) {
-        row[x] = INT_MAX; continue;
+        if (IS_MASK && bmask && ((int *) bmask->line[yp])[xp]) {
+          row[x] = INT_MAX; continue;
+        }
+        row[x] = fast_patch_nobranch<PATCH_W, IS_WINDOW>(adata, b, xp, yp, p);
       }
-      row[x] = fast_patch_nobranch<PATCH_W, IS_WINDOW>(adata, b, xp, yp, p);
-      //if (x == 1 && y == 1) { printf("1, 1 => %d, %d (%d)\n", xp, yp, row[x]); }
     }
   }
   return ans;

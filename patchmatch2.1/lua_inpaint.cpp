@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <libgen.h>
+#include <mutex>
+#include <cstring>
 
 #include "TH/TH.h"
 #include <TH/THStorage.h>
@@ -44,6 +46,7 @@ static int vote(lua_State *L);
 static int release_bitmap(lua_State *L);
 int push_ann_to_stack(lua_State *L, BITMAP *ann);
 void error (lua_State *L, const char *fmt, ...);
+void init_p2v(BITMAP *im);
 
 /*
   @param Image with a hole.
@@ -727,4 +730,13 @@ int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
   printf("patch2vec: %f sec\n", cpu_time_used);
 
   return 0;
+}
+
+void init_p2v(BITMAP *im)
+{
+  im->p2vd = new float [im->h*im->w*PATCH2VEC_LENGTH];
+  im->p2vv = new unsigned char [im->h*im->w];
+
+  memset(im->p2vd, 0, im->h*im->w*PATCH2VEC_LENGTH*sizeof(float));
+  memset(im->p2vv, 0, im->h*im->w*PATCH2VEC_LENGTH*sizeof(unsigned char));
 }

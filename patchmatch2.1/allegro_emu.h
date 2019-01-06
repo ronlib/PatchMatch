@@ -6,6 +6,8 @@ struct BITMAP {
   int w, h;
   unsigned char **line;
   unsigned char *data;
+  float *p2vd;     // patch2vec data
+  unsigned char *p2vv;      // patch2vec validity
   BITMAP(int ww = 1, int hh = 1): w(ww), h(hh) {}
   explicit BITMAP(const BITMAP &);
 };
