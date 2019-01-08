@@ -26,16 +26,42 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
 template<int LENGTH>
 int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, Params *p)
 {
-  int adata[LENGTH*LENGTH];
-  for (int dy = 0 ; dy < LENGTH ; dy++) { // copy a patch from a to adata
-    int *drow = ((int *) a->line[ay+dy])+ax;
-    int *adata_row = adata+(dy*LENGTH);
-    for (int dx = 0 ; dx < LENGTH ; dx++) {
-      adata_row[dx] = drow[dx];
-    }
-  }
 
-  return nn_patch_dist<LENGTH>(adata, b, bx, by, 0, p);
+  if (a->p2vd && a->p2vv && b->p2vd && b->p2vv) {
+    if (!(a->p2vv[ay*a->w+ax])) {
+      nn_patch2vec(a, ax, ay, p, &(a->p2vd[(ay*a->w+ax)*PATCH2VEC_LENGTH]));
+      a->p2vv[ay*a->w+ax] = 1;
+    }
+
+    if (!(b->p2vv[by*b->w+bx])) {
+      nn_patch2vec(b, bx, by, p, &(b->p2vd[(by*b->w+bx)*PATCH2VEC_LENGTH]));
+      b->p2vv[by*b->w+bx] = 1;
+    }
+
+    float result = 0;
+    for (int i = 0 ; i < PATCH2VEC_LENGTH ; i++) {
+      result +=
+        a->p2vd[(ay*a->w+ax)*PATCH2VEC_LENGTH+i]*b->p2vd[(by*b->w+bx)*PATCH2VEC_LENGTH+i];
+    }
+
+    result = sqrt(result);
+    printf("Used nn_patch_dist_ab\n");
+
+    return result;
+  }
+  else {
+    int adata[LENGTH*LENGTH];
+
+    for (int dy = 0 ; dy < LENGTH ; dy++) { // copy a patch from a to adata
+      int *drow = ((int *) a->line[ay+dy])+ax;
+      int *adata_row = adata+(dy*LENGTH);
+      for (int dx = 0 ; dx < LENGTH ; dx++) {
+        adata_row[dx] = drow[dx];
+      }
+    }
+
+    return nn_patch_dist<LENGTH>(adata, b, bx, by, 0, p);
+  }
 }
 
 template<int LENGTH>

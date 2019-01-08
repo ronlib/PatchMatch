@@ -728,3 +728,12 @@ int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
 
   return 0;
 }
+
+void init_p2v(BITMAP *im)
+{
+  im->p2vd = calloc(im->h*im->w*PATCH2VEC_LENGTH, sizeof(float));
+  im->p2vv = new unsigned char [im->h*im->w];
+
+  memset(im->p2vd, 0, im->h*im->w*PATCH2VEC_LENGTH*sizeof(float));
+  memset(im->p2vv, 0, im->h*im->w*sizeof(unsigned char));
+}
