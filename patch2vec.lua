@@ -42,7 +42,7 @@ end
 function compute_patch2vec(patch1_storage_obj, H, W, num_channels)
 	 local ffi = require 'ffi'
    local patch1 = create_tensor_from_image_storage(patch1_storage_obj, H, W, num_channels)
-	 local v1 = NN:forward(patch1):clone()
+	 local v1 = NN:forward(patch1):clone():float()
    return v1:storage(), tonumber(ffi.cast('intptr_t', v1:data()))
 end
 

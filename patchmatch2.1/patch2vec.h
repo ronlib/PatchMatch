@@ -26,17 +26,23 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
 template<int LENGTH>
 int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, Params *p)
 {
-
   if (a->p2vd && a->p2vv && b->p2vd && b->p2vv) {
     if (!(a->p2vv[ay*a->w+ax])) {
       nn_patch2vec(a, ax, ay, p, &(a->p2vd[(ay*a->w+ax)*PATCH2VEC_LENGTH]));
       a->p2vv[ay*a->w+ax] = 1;
+    }
+    else {
+      printf("Saved nn\n");
     }
 
     if (!(b->p2vv[by*b->w+bx])) {
       nn_patch2vec(b, bx, by, p, &(b->p2vd[(by*b->w+bx)*PATCH2VEC_LENGTH]));
       b->p2vv[by*b->w+bx] = 1;
     }
+    else {
+      printf("Saved nn\n");
+    }
+
 
     float result = 0;
     for (int i = 0 ; i < PATCH2VEC_LENGTH ; i++) {
