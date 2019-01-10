@@ -634,7 +634,6 @@ static int compare_patchmatch(lua_State *L)
   basename1 = basename(full_path1);
   basename2 = basename(full_path2);
 
-
   BITMAP *a = load_bitmap(A_file_path);
   BITMAP *b = load_bitmap(B_file_path);
 
