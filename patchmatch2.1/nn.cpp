@@ -629,7 +629,6 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                 // TODO: when using neural network, change this patch distance code
 							{
 								int err0 = ((int *) annd->line[y])[x+dx];
-                increase_patchmatch_counter();
                 if (p->nn_dist == 1 && PATCH_W == 16) {
                   err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
                 }
@@ -638,8 +637,6 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                 }
                 else {
                   // faster way to calculate error with known error( Neighbor(ax,ay), MatchInB(Neighbor(ax,ay)) )
-                  increase_patchmatch_counter();
-
                   int xa = dx, xb = 0;
                   if (dx > 0) { xa = 0; xb = dx; }
                   int partial = 0;
@@ -681,7 +678,6 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
                      (!amask || !((int *) amask->bmp->line[y+dy])[x]))
                   )) {
                 int err0 = ((int *) annd->line[y+dy])[x];
-                increase_patchmatch_counter();
                 if (p->nn_dist == 1 && PATCH_W == 16) {
                   err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
                 }
@@ -1020,7 +1016,6 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                      ))
 								{
                   int err0 = ((int *) annd->line[y])[x+dx];
-                  increase_patchmatch_counter();
                   if (p->nn_dist == 1 && PATCH_W == 16) {
                     err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
                   }
@@ -1069,7 +1064,6 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
                     ))
 								{
                   int err0 = ((int *) annd->line[y+dy])[x];
-                  increase_patchmatch_counter();
                   if (p->nn_dist == 1 && PATCH_W == 16) {
                     err0 = nn_patch_dist_ab<16>(a, x, y, b, xpp, ypp, 0, p);
                   }
@@ -1243,7 +1237,6 @@ void nn_n_proponly(Params *p, BITMAP *a, BITMAP *b,
             if ((xpp != xbest || ypp != ybest) &&
                 (unsigned) xpp < (unsigned) (b->w-PATCH_W+1)) {
               int err0 = ((int *) annd->line[y])[x+dx];
-              increase_patchmatch_counter();
               int xa = dx, xb = 0;
               if (dx > 0) { xa = 0; xb = dx; }
               int partial = 0;
@@ -1279,7 +1272,6 @@ void nn_n_proponly(Params *p, BITMAP *a, BITMAP *b,
             if ((xpp != xbest || ypp != ybest) &&
                 (unsigned) ypp < (unsigned) (b->h-PATCH_W+1)) {
               int err0 = ((int *) annd->line[y+dy])[x];
-              increase_patchmatch_counter();
               int ya = dy, yb = 0;
               if (dy > 0) { ya = 0; yb = dy; }
               int partial = 0;
