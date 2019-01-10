@@ -125,7 +125,6 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
   Pyramid pyramid;
   build_pyramid(p, &pyramid, a, mask);
 
-
   BITMAP *ann = 0, *inpainted_image = 0;
   int min_level = p->max_inpaint_levels ? pyramid.max_pyramid_level-1 - p->max_inpaint_levels : 0;
 
