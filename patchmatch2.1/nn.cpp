@@ -724,7 +724,12 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
               xpp -= dx;
 
               if (!IS_WINDOW || window_constraint(p, a, b, x, y, xpp, ypp, ann_window, awinsize)) {
-                attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                if (p->nn_dist && (p->patch_w == 32 || p->patch_w == 16)) {
+                  attempt_n_nn<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, a, x, y, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                }
+                else {
+                  attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                }
               }
             }
 
@@ -735,7 +740,12 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
               ypp -= dy;
 
               if (!IS_WINDOW || window_constraint(p, a, b, x, y, xpp, ypp, ann_window, awinsize)) {
-                attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                if (p->nn_dist && (p->patch_w == 32 || p->patch_w == 16)) {
+                  attempt_n_nn<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, a, x, y, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                }
+                else {
+                  attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+                }
               }
             }
           }
@@ -756,7 +766,12 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
             seed = RANDI(seed);
             int ypp = ymin+seed%(ymax-ymin);
             if (!IS_WINDOW || window_constraint(p, a, b, x, y, xpp, ypp, ann_window, awinsize)) {
-              attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+              if (p->nn_dist && (p->patch_w == 32 || p->patch_w == 16)) {
+                attempt_n_nn<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, a, x, y, b, xpp, ypp, bmask, region_masks, src_mask, p);
+              }
+              else {
+                attempt_n<PATCH_W, IS_MASK, IS_WINDOW>(err, xbest, ybest, adata, b, xpp, ypp, bmask, region_masks, src_mask, p);
+              }
             }
           }
         }

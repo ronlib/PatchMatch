@@ -134,9 +134,33 @@ void attempt_n(int &err, int &xbest, int &ybest, int *adata, BITMAP *b, int bx, 
   }
 }
 
+// !!!notice that "err", "xbest", "ybest" might be changed in this function
+template<int PATCH_W, int IS_MASK, int IS_WINDOW>
+void attempt_n_nn(int &err, int &xbest, int &ybest, BITMAP *a, int x, int y, BITMAP *b, int bx, int by, BITMAP *bmask, RegionMasks *region_masks, int src_mask, Params *p) {
+  if ((bx != xbest || by != ybest) &&
+      (unsigned) bx < (unsigned) (b->w-PATCH_W+1) &&
+      (unsigned) by < (unsigned) (b->h-PATCH_W+1))
+	{
+    if (IS_MASK && region_masks && src_mask != ((int *) region_masks->bmp->line[by])[bx]) { return; }
+    if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return; }
+		int current = 0;
+
+		if (p->nn_dist == 1 && PATCH_W == 16) { current =  nn_patch_dist_ab<16>(a, x, y, b, bx, by, err, p); }
+    else if (p->nn_dist == 1 && PATCH_W == 32) { current =  nn_patch_dist_ab<32>(a, x, y, b, bx, by, err, p); }
+
+    if (current < err) {
+      err = current;
+      xbest = bx;
+      ybest = by;
+    }
+  }
+}
+
+
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_nobranch(int *adata, BITMAP *b, int bx, int by, Params *p) {
   //if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return INT_MAX; }
+  increase_patchmatch_counter();
   if (p->nn_dist == 1 && TPATCH_W == 16) {
     int ans = nn_patch_dist<16>(adata, b, bx, by, 0, p);
     return ans;
