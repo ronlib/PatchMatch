@@ -50,10 +50,10 @@ int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int m
         a->p2vd[(ay*a->w+ax)*PATCH2VEC_LENGTH+i]*b->p2vd[(by*b->w+bx)*PATCH2VEC_LENGTH+i];
     }
 
-    result = 1-result;
+    int retval = sqrt(2-2*result)*(INT_MAX/2);
     printf("Used nn_patch_dist_ab\n");
 
-    return result;
+    return retval;
   }
   else {
     int adata[LENGTH*LENGTH];
