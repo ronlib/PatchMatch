@@ -198,9 +198,10 @@ int distanceMaskedImage(MaskedImage_P source,int xs,int ys, MaskedImage_P target
 			if (isMasked(target, xkt, ykt)) {distance++; continue;}
 
 			ssd=0;
-            for (band=0; band<3; ++band) {
+      for (band=0; band<3; ++band) {
 				// pixel values
 				s_value = getSampleMaskedImage(source, xks, yks, band);
+        // TODO: fix this, should be target
 				t_value = getSampleMaskedImage(source, xkt, ykt, band);
 
 				// pixel horizontal gradients (Gx)

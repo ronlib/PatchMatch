@@ -26,7 +26,7 @@ Opencv can be download it here
 http://opencv.org/downloads.html
 
 How to use
-===========
+==========
 
 python3 setup.py build_ext --inplace
 python3 main.py -f images/forest.bmp
