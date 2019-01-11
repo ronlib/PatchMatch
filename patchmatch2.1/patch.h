@@ -160,7 +160,6 @@ void attempt_n_nn(int &err, int &xbest, int &ybest, BITMAP *a, int x, int y, BIT
 template<int TPATCH_W, int IS_WINDOW>
 int fast_patch_nobranch(int *adata, BITMAP *b, int bx, int by, Params *p) {
   //if (IS_MASK && bmask && ((int *) bmask->line[by])[bx]) { return INT_MAX; }
-  increase_patchmatch_counter();
   if (p->nn_dist == 1 && TPATCH_W == 16) {
     int ans = nn_patch_dist<16>(adata, b, bx, by, 0, p);
     return ans;
