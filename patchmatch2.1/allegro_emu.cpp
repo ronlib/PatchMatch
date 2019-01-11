@@ -29,6 +29,8 @@ void destroy_bitmap(BITMAP *bmp) {
 	if (bmp) {
 		if (bmp->line) delete[] bmp->line;
 		if (bmp->data) delete[] bmp->data;
+    if (bmp->p2vd) delete[] bmp->p2vd;
+    if (bmp->p2vv) delete[] bmp->p2vv;
 		delete bmp;
 	}
 }
