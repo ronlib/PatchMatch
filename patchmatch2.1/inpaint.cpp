@@ -153,6 +153,7 @@ BITMAP *inpaint(Params *p, BITMAP *a, BITMAP *mask)
     else {
       UpscaleInpintedImageRetVal upscaled =
         upscale_image_nn(p, &pyramid, inpainted_image, ann, level);
+      init_p2v(upscaled.image);
       snprintf(filename, sizeof(filename)/sizeof(char),
                "upscaled_image_level_%d.png", level);
       save_bitmap(upscaled.image, filename);
@@ -219,6 +220,7 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
     }
     else {
       pyramid->images_pyramid[level] = downscale_image(pyramid->images_pyramid[level-1]);
+      init_p2v(pyramid->images_pyramid[level]);
       // Scaling down the original mask, and not the thresholded one
       /* BITMAP *prev_mask = scaled_mask; */
 
@@ -415,6 +417,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                            /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask, /*aweight=*/NULL,
                            /*ainit=*/image, /*region_masks=*/NULL, /*aconstraint=*/0,
                            /*mask_self_only=*/0);
+    init_p2v(inpainted_image);
     snprintf(filename, 128, "inpainted_image_level_%d_iter_%d.png", level, i);
     save_bitmap(inpainted_image, filename);
     if (i > 0)
