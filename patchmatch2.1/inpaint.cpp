@@ -389,7 +389,7 @@ BITMAP *inpaint_image(Params *p, Pyramid *pyramid, BITMAP *image,
                      NULL,                  // region_masks, seperating regions
                      /*amask=*/rm_bmask);
   }
-  for(int i = 0 ; i < (pyramid->max_pyramid_level+10 - level) ; i++) {
+  for(int i = 0 ; i < (pyramid->max_pyramid_level+5 - level) ; i++) {
     nn(p, inpainted_image, orig_image, ann, annd,
        /*amask=*/p->inpaint_use_full_image_coherence ? rm_black : rm_inv_inpainted_patch_mask,
        /*bmask=*/bmask, 0, 0, rp, 0, 0, 0, /*region_masks=*/NULL, p->cores, NULL,
