@@ -213,6 +213,7 @@ void build_pyramid(Params *p, Pyramid * pyramid, BITMAP *image, BITMAP *mask)
     BITMAP *scaled_mask_copy = 0;
     if (level == 0) {
         pyramid->images_pyramid[level] = image;
+        init_p2v(pyramid->images_pyramid[level]);
         pyramid->masks_pyramid[level] = new BITMAP(*mask);
           // create_transformed_mask(p, mask, p->patch_w, p->patch_w/2, p->inpaint_border, ADD_BORDERS);
         // In order for this confition to be compatible with the rest of the loop
