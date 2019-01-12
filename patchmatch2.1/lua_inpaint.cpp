@@ -411,6 +411,25 @@ int lua_inpaint(lua_State *L)
 
   const char * image_file_path = luaL_checkstring(L, i);  i++;
   const char * mask_file_path = luaL_checkstring(L, i);   i++;
+
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->nn_dist = luaL_checknumber(L, i);
+    if (p->nn_dist != 0) p->nn_dist = 1;
+  } i++;
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->patch_w = luaL_checknumber(L, i);
+    if (p->nn_dist && (p->patch_w != 16 && p->patch_w != 32)) {
+      p->patch_w = 32;   // Default value when using neural network
+    }
+  } i++;
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->inpaint_add_completion_term = luaL_checknumber(L, i);
+    if (p->inpaint_add_completion_term != 0) p->inpaint_add_completion_term = 1;
+  } i++;
+  if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
+    p->inpaint_use_full_image_coherence = luaL_checknumber(L, i);
+    if (p->inpaint_use_full_image_coherence != 0) p->inpaint_use_full_image_coherence = 1;
+  } i++;
   if (nin >= i && !lua_isnil(L, i) && luaL_checknumber(L, i)) {
     p->nn_iters = luaL_checknumber(L, i);
   } i++;
@@ -430,14 +449,8 @@ int lua_inpaint(lua_State *L)
   BITMAP *image = load_bitmap(image_file_path);
   BITMAP *mask = load_bitmap(mask_file_path);
 
-  // Must be 32 to support our specific neural network
-  p->patch_w = 32;
-  // Indicating to using a neural network
-  p->nn_dist = 0;
   init_params(p);
   p->algo = ALGO_CPU;
-  p->inpaint_add_completion_term = 0;
-  p->inpaint_use_full_image_coherence = 0;
   inpaint(p, image, mask);
 
   destroy_bitmap(image);
