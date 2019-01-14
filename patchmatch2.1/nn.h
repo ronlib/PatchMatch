@@ -56,15 +56,11 @@ using namespace std;
    Randomized NN algorithm
    -------------------------------------------------------------------- */
 
-#ifdef IS_VERBOSE
-#if !IS_VERBOSE
-#ifdef printf
-#undef printf
-#endif
-#define printf (void)
-#define fflush (void)
-#endif
-#endif
+// Default is not verbose
+// #ifndef IS_VERBOSE
+// #define printf (void)
+// #define fflush (void)
+// #endif
 
 class RecomposeParams;
 class Params;

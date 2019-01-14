@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project(PatchMatch)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (MSVC AND OPENCV_SEARCH_PATH)
 	set(OpenCV_FOUND 1)
@@ -83,8 +84,10 @@ target_include_directories(patchmatch2 PRIVATE ${LUA_INCLUDE_DIR}//lua5.1)
 
 OPTION(INPAINT_VERBOSE "Make inpainting algorithm verbose" OFF) # Disabled by default
 IF(INPAINT_VERBOSE)
-  # ADD_DEFINITIONS(-DMACRO)
-  target_compile_definitions(patchmatch2 PRIVATE IS_VERBOSE=1)
-ELSE(INPAINT_VERBOSE)
-  target_compile_definitions(patchmatch2 PRIVATE IS_VERBOSE=0)
+  target_compile_definitions(patchmatch2 PRIVATE IS_VERBOSE)
 ENDIF(INPAINT_VERBOSE)
+
+OPTION(USE_COUNTERS "Produce statistics while running" OFF) # Disabled by default
+IF(USE_COUNTERS)
+  target_compile_definitions(patchmatch2 PRIVATE USE_COUNTERS)
+ENDIF(USE_COUNTERS)

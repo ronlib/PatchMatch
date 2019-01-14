@@ -153,10 +153,12 @@ BITMAP *init_dist_n(Params *p, BITMAP *a, BITMAP *b, BITMAP *ann, BITMAP *bmask,
     int adata[PATCH_W*PATCH_W];
     int *row = (int *) ans->line[y];
     int *arow = amask ? (int *) amask->bmp->line[y]: NULL;
+    printf("init_dist_n: y=%d\n", y);
     for (int x = box.xmin; x < box.xmax; x++) {
       if (IS_MASK && amask && arow[x]) { continue; }
+#ifdef IS_VERBOSE
       printf("init_dist_n: y=%d, x=%d\n", y, x);
-
+#endif //IS_VERBOSE
       int xp, yp;
       getnn(ann, x, y, xp, yp);
 
@@ -592,7 +594,6 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
       int *amask_row = IS_MASK ? (amask ? (int *) amask->bmp->line[y]: NULL): NULL;
       for (int x = xstart; x != xfinal; x += xchange) {
         if (IS_MASK && amask && amask_row[x]) { continue; }
-        printf("nn_n: line %d, iter=%d\n", y, nn_iter);
 
         // TODO: this copying seems to have no use. Consider removing
         for (int dy0 = 0; dy0 < PATCH_W; dy0++) { // copy a patch from a
@@ -778,9 +779,12 @@ void nn_n(Params *p, BITMAP *a, BITMAP *b,
 
         ((int *) ann->line[y])[x] = XY_TO_INT(xbest, ybest);
         ((int *) annd->line[y])[x] = err;
+#ifdef IS_VERBOSE
         printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
                xbest, ybest, x, y, err, nn_iter);
+#endif //IS_VERBOSE
       }
+      printf("nn_n: in line %d\n", y);
     }
 
     {
@@ -914,9 +918,12 @@ void nn_n_gpucpu(Params *p, BITMAP *a, BITMAP *b,
 
           ((int *) ann_out->line[y])[x] = XY_TO_INT(xbest, ybest);
           ((int *) annd_out->line[y])[x] = err;
+#ifdef IS_VERBOSE
           printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
                  xbest, ybest, x, y, err, nn_iter);
+#endif //IS_VERBOSE
         }
+        printf("nn_n_gpucpu: in line %d\n", y);
       } /* Loop over y. */
       swap(ann, ann_out);
       swap(annd, annd_out);
@@ -1175,12 +1182,14 @@ void nn_n_cputiled(Params *p, BITMAP *a, BITMAP *b,
           } else {
             ann_writeback[x] = XY_TO_INT(xbest, ybest);
             annd_writeback[x] = err;
+#ifdef IS_VERBOSE
             printf("Chose (%d,%d) as NN for (%d,%d), distance=%#010x, iter=%d\n",
                    xbest, ybest, x, y, err, nn_iter);
+#endif //IS_VERBOSE
           }
 #endif
-
         } // x
+        printf("nn_n_cputiled: in line %d\n", y);
       } // y
 
 #if SYNC_WRITEBACK
