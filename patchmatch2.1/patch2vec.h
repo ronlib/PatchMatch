@@ -1,5 +1,6 @@
 #ifndef _PATCH_2_VEC_H
 #define _PATCH_2_VEC_H
+#include <mutex>
 #include <ctime>
 #include "allegro_emu.h"
 #include "nn.h"
@@ -26,12 +27,25 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p);
 template<int LENGTH>
 int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int maxval, Params *p)
 {
+#ifdef USE_COUNTERS
+  {
+    std::lock_guard<std::mutex> guard(g_counters.m);
+    g_counters.n_patch_comp++;
+    g_counters.n_nn_references += 2;
+  }
+#endif // USE_COUNTERS
   if (a->p2vd && a->p2vv && b->p2vd && b->p2vv) {
     if (!(a->p2vv[ay*a->w+ax])) {
       nn_patch2vec(a, ax, ay, p, &(a->p2vd[(ay*a->w+ax)*PATCH2VEC_LENGTH]));
       a->p2vv[ay*a->w+ax] = 1;
     }
     else {
+#ifdef USE_COUNTERS
+      {
+        std::lock_guard<std::mutex> guard(g_counters.m);
+        g_counters.n_cache_nn++;
+      }
+#endif // USE_COUNTERS
 #ifdef IS_VERBOSE
       printf("Saved nn\n");
 #endif //IS_VERBOSE
@@ -42,6 +56,12 @@ int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int m
       b->p2vv[by*b->w+bx] = 1;
     }
     else {
+#ifdef USE_COUNTERS
+      {
+        std::lock_guard<std::mutex> guard(g_counters.m);
+        g_counters.n_cache_nn++;
+      }
+#endif // USE_COUNTERS
 #ifdef IS_VERBOSE
       printf("Saved nn\n");
 #endif //IS_VERBOSE
@@ -81,6 +101,13 @@ int nn_patch_dist(int *adata, BITMAP *b, int bx, int by, int maxval, Params *p)
 {
   if (LENGTH != p->patch_w) { fprintf(stderr, "nn_patch_dist should be called with p->patch_w==%d\n", LENGTH); exit(1); }
 
+#ifdef USE_COUNTERS
+  {
+    std::lock_guard<std::mutex> guard(g_counters.m);
+    g_counters.n_patch_comp++;
+    g_counters.n_nn_references += 2;
+  }
+#endif // USE_COUNTERS
   clock_t start, end;
   double cpu_time_used;
   start = clock();

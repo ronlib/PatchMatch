@@ -84,8 +84,11 @@ static int compare_patchmatch(lua_State *L);
 static int compare_patchmatch_performance(lua_State *L);
 
 static int patch2vec_image(lua_State *L);
+void print_counters();
 
 lua_State * g_L = 0;
+Counters g_counters;
+Counters::Counters() : n_patch_comp(0), n_nn_references(0), n_cache_nn(0) {}
 
 extern "C" DLL_PUBLIC int luaopen_libpatchmatch2 (lua_State *L)
 {
@@ -671,6 +674,8 @@ static int compare_patchmatch(lua_State *L)
   snprintf(result_file_path, sizeof(result_file_path), "%s/%s_%s_nn.bmp", dir, basename1, basename2);
   save_bitmap(ann_nn, result_file_path);
 
+  print_counters();
+
   init_params(p_l2);
   BITMAP *ann_l2 = init_nn(p_l2, a, b, NULL, NULL, NULL, 1, NULL, NULL);
   BITMAP *annd_l2 = init_dist(p_l2, a, b, ann_l2, NULL, NULL, NULL);
@@ -683,6 +688,10 @@ static int compare_patchmatch(lua_State *L)
   lua_pop(g_L, 2);
   free(full_path2);
   free(full_path1);
+
+#ifdef USE_COUNTERS
+  print_counters();
+#endif // USE_COUNTERS
 
   return 0;
 }
@@ -763,3 +772,14 @@ void zero_p2v(BITMAP *im)
     memset(im->p2vv, 0, im->h*im->w*sizeof(unsigned char));
   }
 }
+
+#ifdef USE_COUNTERS
+void print_counters()
+{
+  printf("Number of patch comparisons: %d\n"
+         "Number of neural network references requested: %d\n"
+         "Number of neural network cached results returned: %d\n",
+         g_counters.n_patch_comp, g_counters.n_nn_references,
+         g_counters.n_cache_nn);
+}
+#endif // USE_COUNTERS
