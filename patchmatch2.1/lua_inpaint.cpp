@@ -748,8 +748,10 @@ int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
 
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-  printf("patch2vec: %f sec\n", cpu_time_used);
 
+#ifdef IS_VERBOSE
+  printf("patch2vec: %f sec\n", cpu_time_used);
+#endif //IS_VERBOSE
   return 0;
 }
 
