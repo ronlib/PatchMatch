@@ -32,7 +32,9 @@ int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int m
       a->p2vv[ay*a->w+ax] = 1;
     }
     else {
+#ifdef IS_VERBOSE
       printf("Saved nn\n");
+#endif //IS_VERBOSE
     }
 
     if (!(b->p2vv[by*b->w+bx])) {
@@ -40,7 +42,9 @@ int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int m
       b->p2vv[by*b->w+bx] = 1;
     }
     else {
+#ifdef IS_VERBOSE
       printf("Saved nn\n");
+#endif //IS_VERBOSE
     }
 
 
@@ -51,7 +55,9 @@ int nn_patch_dist_ab(BITMAP *a, int ax, int ay, BITMAP *b, int bx, int by, int m
     }
 
     int retval = sqrt(2-2*result)*(INT_MAX/2);
+#ifdef IS_VERBOSE
     printf("Used nn_patch_dist_ab\n");
+#endif //IS_VERBOSE
 
     return retval;
   }
