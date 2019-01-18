@@ -143,7 +143,6 @@ static int nn(lua_State *L)
   double scalemin = 0.5, scalemax = 2.0;  // The product of these must be one.
   int sim_mode = 0;
   int knn_chosen = -1;
-  int enrich_mode = 0;
   int mode = MODE_IMAGE;
   const char * A_file_path = luaL_checkstring(L, i);  i++;
   const char * B_file_path = luaL_checkstring(L, i);  i++;
@@ -607,7 +606,7 @@ static int compare_patchmatch_performance(lua_State *L)
 
   start = clock();
   for (int counter = number_of_runs ; counter > 0 ; counter--) {
-    int retval = nn_patch_dist_ab<32>(a, x, y, a, x, y, 0x0fffffff, p);
+    nn_patch_dist_ab<32>(a, x, y, a, x, y, 0x0fffffff, p);
   }
   end = clock();
   cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -640,7 +639,6 @@ static int compare_patchmatch(lua_State *L)
   const char * A_file_path = luaL_checkstring(L, i);  i++;
   const char * B_file_path = luaL_checkstring(L, i);  i++;
 
-  char filepath[FILE_PATH_LENGTH];
   char *full_path1 = realpath(A_file_path, NULL);
   char *full_path2 = realpath(B_file_path, NULL);
   char *basename1, *basename2, dirnamebuf[FILE_PATH_LENGTH], *dir;
@@ -726,7 +724,7 @@ int nn_patch2vec(BITMAP *a, int ax, int ay, Params *p, float *ret_arr)
     }
   }
 
-  THByteStorage *a_th_storage, *b_th_storage;
+  THByteStorage *a_th_storage;
   a_th_storage = THByteStorage_newWithData(abuf, p->patch_w*p->patch_w*3);
 
   lua_getglobal(g_L, "compute_patch2vec");
@@ -778,9 +776,9 @@ void zero_p2v(BITMAP *im)
 #ifdef USE_COUNTERS
 void print_counters()
 {
-  printf("Number of patch comparisons: %d\n"
-         "Number of neural network references requested: %d\n"
-         "Number of neural network cached results returned: %d\n",
+  printf("Number of patch comparisons: %lu\n"
+         "Number of neural network references requested: %lu\n"
+         "Number of neural network cached results returned: %lu\n",
          g_counters.n_patch_comp, g_counters.n_nn_references,
          g_counters.n_cache_nn);
 }
