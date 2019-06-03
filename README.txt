@@ -31,6 +31,6 @@ How to use
 python3 setup.py build_ext --inplace
 python3 main.py -f images/forest.bmp
 
-change
+change2
 
 Enjoy!!
